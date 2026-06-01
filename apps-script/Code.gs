@@ -1,4 +1,4 @@
-const SHEETS = ["Settings", "Subjects", "Students", "Schedule", "Assessments", "Invoices", "InvoiceItems", "Payments", "ReportCards"];
+const SHEETS = ["Settings", "Subjects", "Students", "Schedule", "Attendance", "Assessments", "Invoices", "InvoiceItems", "Payments", "ReportCards", "Messages"];
 
 function doGet(e) {
   return jsonResponse(handleRequest({ action: "GET", sheet: e.parameter.sheet }));
@@ -39,11 +39,13 @@ function setupSheets() {
     Subjects: ["ID","Name","Description","GradeRange","Price","Status","CreatedAt","UpdatedAt"],
     Students: ["ID","Name","Grade","Guardian","ParentPhone","ParentEmail","StudentPhone","Address","Subjects","StartDate","Frequency","Days","Time","PaymentType","Status","Notes","CreatedAt","UpdatedAt"],
     Schedule: ["ID","Student","Subject","Day","Start","End","Sessions","Type","Location","Notes","CreatedAt","UpdatedAt"],
+    Attendance: ["ID","Student","Subject","Date","Status","Notes","CreatedAt","UpdatedAt"],
     Assessments: ["ID","Student","Subject","Type","Name","Date","Term","Mark","Total","Percentage","Comment","CreatedAt","UpdatedAt"],
     Invoices: ["ID","Date","Due","Student","Guardian","Package","Qty","Rate","Discount","Total","Status","Method","Notes","CreatedAt","UpdatedAt"],
     InvoiceItems: ["ID","InvoiceID","Description","Qty","Rate","Total","CreatedAt","UpdatedAt"],
     Payments: ["ID","InvoiceID","Date","Amount","Method","Reference","CreatedAt","UpdatedAt"],
-    ReportCards: ["ID","Student","Period","Subjects","OverallAverage","Comments","CreatedAt","UpdatedAt"]
+    ReportCards: ["ID","Student","Period","Subjects","OverallAverage","Comments","CreatedAt","UpdatedAt"],
+    Messages: ["ID","Date","Student","Type","Text","CreatedAt","UpdatedAt"]
   };
   SHEETS.forEach(name => {
     let sheet = ss.getSheetByName(name);

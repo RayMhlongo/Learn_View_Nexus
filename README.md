@@ -6,9 +6,14 @@ Tagline: **Learn Smarter. Manage Smarter.**
 
 ## What is included
 
-- Responsive web dashboard with login, KPIs, quick actions and demo data.
-- Dynamic subject, student, schedule, assessment and invoice interfaces.
-- Printable invoice, report card and weekly schedule layouts with LearnView logo watermark.
+- Commercial SaaS-style dashboard with login, KPIs, quick actions and demo data.
+- Official LearnView logo asset in `assets/learnview-logo.jpeg`, used across app and print documents.
+- Dedicated student profile workflow with parent details, subjects, attendance, assessments, invoices, payments, trends, notes and report history.
+- Advanced schedule views for weekly calendar, monthly calendar and daily agenda, with conflict warnings and drag/drop lesson movement.
+- Attendance tracking for Present, Absent, Late and Excused statuses.
+- Parent communication tools for WhatsApp-ready invoice, attendance and performance messages.
+- BI dashboard for revenue, growth, attendance, subject, student and assessment analytics.
+- Premium printable invoice, report card and weekly schedule layouts with 6% logo watermark and QR-style verification block.
 - Central Google Apps Script API hook in `app.js`.
 - Google Apps Script backend in `apps-script/Code.gs`.
 - GitHub Pages-ready static files.
@@ -43,4 +48,4 @@ The app runs in demo mode until a Google Apps Script web app URL is added to `AP
 
 ## Notes
 
-The current logo is an editable SVG LearnView mark based on the teal and dark slate brand direction. Replace `logo()` in `app.js` with the official logo asset path when a separate logo file is available.
+The app is still static and GitHub Pages-ready, but the UI has been structured so it can later be split into components during a React or Capacitor build pass.
