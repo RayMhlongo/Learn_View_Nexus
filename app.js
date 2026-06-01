@@ -49,14 +49,40 @@ let view = "dashboard";
 let filters = {};
 
 function loadState() {
-  const saved = localStorage.getItem("learnview-demo-state");
-  return saved ? JSON.parse(saved) : structuredClone(seed);
+  const saved = storageGet("learnview-demo-state");
+  return saved ? JSON.parse(saved) : clone(seed);
 }
-function saveState() { localStorage.setItem("learnview-demo-state", JSON.stringify(state)); }
+function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (error) { return null; }
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (error) {}
+}
+function sessionGet(key) {
+  try { return sessionStorage.getItem(key); } catch (error) { return null; }
+}
+function sessionSet(key, value) {
+  try { sessionStorage.setItem(key, value); } catch (error) {}
+}
+function sessionRemove(key) {
+  try { sessionStorage.removeItem(key); } catch (error) {}
+}
+function saveState() { storageSet("learnview-demo-state", JSON.stringify(state)); }
 function money(n) { return `R ${Number(n || 0).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function pct(a) { return Math.round((Number(a.mark) / Number(a.total || 1)) * 100); }
 function id(prefix, list) { return `${prefix}-${String(list.length + 1).padStart(3, "0")}`; }
-function toast(msg) { const t = document.querySelector(".toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2600); }
+function toast(msg) {
+  let t = document.querySelector(".toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.className = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2600);
+}
 function icon(name) { return `<i data-lucide="${name}"></i>`; }
 function refreshIcons() { if (window.lucide) lucide.createIcons(); }
 
@@ -73,7 +99,7 @@ const api = {
 };
 
 function render() {
-  const authed = sessionStorage.getItem("learnview-auth") === "true";
+  const authed = sessionGet("learnview-auth") === "true";
   document.getElementById("app").innerHTML = authed ? shell() : login();
   refreshIcons();
 }
@@ -105,8 +131,11 @@ function login() {
 
 function loginSubmit(e) {
   e.preventDefault();
-  if (document.getElementById("password").value === ADMIN_PASSWORD) {
-    sessionStorage.setItem("learnview-auth", "true"); render();
+  const password = document.getElementById("password").value.trim();
+  if (password === ADMIN_PASSWORD) {
+    sessionSet("learnview-auth", "true");
+    render();
+    toast("Signed in");
   } else toast("Incorrect password");
 }
 
@@ -137,7 +166,7 @@ function shell() {
   </section>`;
 }
 function go(v) { view = v; render(); }
-function logout() { sessionStorage.removeItem("learnview-auth"); render(); }
+function logout() { sessionRemove("learnview-auth"); render(); }
 
 const routes = {
   dashboard() {
@@ -267,5 +296,11 @@ function reportDoc(s) {
   const avg = marks.length ? Math.round(marks.reduce((sum,a)=>sum+pct(a),0)/marks.length) : 0;
   return `<section class="print-doc">${watermark()}<div class="doc-content">${docHead("Report Card", s.name)}<div class="grid cols-2"><p><strong>Grade:</strong> ${s.grade}<br><strong>Guardian:</strong> ${s.guardian}<br><strong>Period:</strong> Current term</p><p><strong>Overall average:</strong> ${avg}%<br><strong>Performance rating:</strong> ${avg>=75?"Excellent":avg>=60?"Satisfactory":"Needs attention"}</p></div>${table("Assessment marks",["Subject","Assessment","Date","Score","Comment"],marks.map(a=>[a.subject,a.name,a.date,`${pct(a)}%`,a.comment]))}<div class="grid cols-2"><p style="margin-top:40px;border-top:1px solid var(--line);padding-top:10px">Parent signature</p><p style="margin-top:40px;border-top:1px solid var(--line);padding-top:10px">Tutor signature</p></div><p>Date generated: ${new Date().toLocaleDateString("en-ZA")}</p></div></section>`;
 }
+
+Object.assign(window, {
+  loginSubmit, go, logout, saveSettings, openStudent, openSchedule, openAssessment,
+  openInvoice, openGeneric, closeModal, saveSubject, saveStudent, saveSchedule,
+  saveAssessment, saveInvoice, editRecord, deleteRecord, previewInvoice, toast
+});
 
 render();
