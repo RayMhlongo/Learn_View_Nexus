@@ -141,6 +141,7 @@ function saveInvoiceWithItem(invoice, data) {
   };
   upsert("invoiceItems", item);
   ui.selectedInvoiceId = invoice.id;
+  ui.sectionAction.invoices = "view";
   return { record: item, existing: Boolean(first) };
 }
 
