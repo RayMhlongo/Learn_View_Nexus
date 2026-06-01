@@ -1,0 +1,17 @@
+{
+  "name": "LearnView Nexus",
+  "short_name": "LearnView",
+  "description": "Premium tutor management for LearnView.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f8",
+  "theme_color": "#078f98",
+  "icons": [
+    {
+      "src": "assets/learnview-logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
