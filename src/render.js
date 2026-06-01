@@ -14,7 +14,7 @@ import { students } from "./components/students.js";
 import { subjects } from "./components/subjects.js";
 import { icon, logo } from "./utils.js";
 
-const routes = { dashboard, students, schedule, attendance, assessments, invoices, reports, analytics, communications, subjects, settings, setup };
+const routes = { dashboard, students, schedule, invoices, more, attendance, assessments, reports, analytics, communications, subjects, settings, setup };
 
 export function renderApp() {
   const app = document.getElementById("app");
@@ -30,4 +30,18 @@ function loginScreen() {
 function shell() {
   const route = routes[ui.view] || routes.dashboard;
   return `<section class="shell">${sidebar()}<section class="content">${topbar()}<div class="page">${route()}</div><button class="btn primary fab" onclick="quickAdd()" title="Quick add">${icon("plus")}</button></section><div class="modal" id="modal"></div><div class="toast"></div></section>`;
+}
+
+function more() {
+  const items = [
+    ["attendance", "Attendance", "user-check"],
+    ["assessments", "Assessments", "clipboard-check"],
+    ["reports", "Report Cards", "file-text"],
+    ["analytics", "Analytics", "chart-column"],
+    ["communications", "Messages", "message-circle"],
+    ["subjects", "Subjects", "book-open"],
+    ["settings", "Settings", "settings"],
+    ["setup", "Setup", "database"]
+  ];
+  return `<section class="card"><div class="section-title"><h3>More</h3></div><div class="category-grid">${items.map(([view, title, ic]) => `<button class="category-card" onclick="go('${view}')">${icon(ic)}<span>${title}</span></button>`).join("")}</div></section>`;
 }

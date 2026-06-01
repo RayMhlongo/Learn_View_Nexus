@@ -81,6 +81,10 @@ export function emptyState(text) {
   return `<div class="empty">${logo("logo-mini")}<strong>${text}</strong></div>`;
 }
 
+export function actionMenu(section, items) {
+  return `<section class="card module-menu"><div class="section-title"><h3>${section}</h3></div><div class="category-grid">${items.map(item => `<button class="category-card" onclick="${item.onclick || `setSectionAction('${item.section || section.toLowerCase()}','${item.action}')`}">${icon(item.icon)}<span>${item.title}</span><small>${item.description || ""}</small></button>`).join("")}</div></section>`;
+}
+
 export function barChart(title, data, suffix = "") {
   const entries = Object.entries(data);
   const max = Math.max(1, ...entries.map(([, value]) => Number(value)));

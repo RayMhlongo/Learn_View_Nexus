@@ -1,9 +1,19 @@
-import { badge, dayNames, emptyState } from "../utils.js";
+import { actionMenu, badge, dayNames, emptyState } from "../utils.js";
 import { hasScheduleConflict, state, studentName, subjectName, ui } from "../state.js";
 import { schedulePrint } from "../print/schedule.js";
 
 export function schedule() {
-  return `<section class="card no-print"><div class="calendar-toolbar"><div class="tabs">${["week", "month", "day"].map(mode => `<button class="${ui.scheduleMode === mode ? "active" : ""}" onclick="setScheduleMode('${mode}')">${mode}</button>`).join("")}</div><div class="actions"><button class="btn primary" onclick="openSchedule()">Add lesson</button><button class="btn ghost" onclick="printCurrent()">Print</button></div></div></section><section class="card no-print"><div class="section-title"><h3>Tutor availability</h3><span class="badge active">Conflict detection active</span></div><div class="availability">${state.settings.availability.split(",").map(item => `<div>${item.trim()}</div>`).join("")}</div></section><section class="print-doc">${scheduleGrid()}</section>`;
+  const action = ui.sectionAction.schedule;
+  if (!action) return actionMenu("Schedule", [
+    { section: "schedule", action: "add", icon: "calendar-plus", title: "Add Lesson" },
+    { section: "schedule", action: "week", icon: "calendar-days", title: "Weekly Schedule" },
+    { section: "schedule", action: "day", icon: "list", title: "Daily Agenda" },
+    { section: "schedule", action: "month", icon: "calendar", title: "Monthly Calendar" },
+    { section: "schedule", action: "print", icon: "printer", title: "Print Schedule" }
+  ]);
+  if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Lesson</h3><button class="btn ghost" onclick="setSectionAction('schedule','')">Back</button></div><button class="btn primary" onclick="openSchedule()">Open lesson form</button></section>`;
+  ui.scheduleMode = action === "print" ? "week" : action;
+  return `<section class="card no-print"><div class="calendar-toolbar"><div class="tabs">${["week", "month", "day"].map(mode => `<button class="${ui.scheduleMode === mode ? "active" : ""}" onclick="setScheduleMode('${mode}')">${mode}</button>`).join("")}</div><div class="actions"><button class="btn ghost" onclick="setSectionAction('schedule','')">Back</button><button class="btn ghost" onclick="printCurrent()">Print</button></div></div></section><section class="card no-print"><div class="section-title"><h3>Tutor availability</h3><span class="badge active">Conflict detection active</span></div><div class="availability">${state.settings.availability.split(",").map(item => `<div>${item.trim()}</div>`).join("")}</div></section><section class="print-doc">${scheduleGrid()}</section>`;
 }
 
 export function scheduleGrid() {

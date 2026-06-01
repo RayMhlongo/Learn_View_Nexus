@@ -1,13 +1,22 @@
-import { average, badge, emptyState, formData, initials, scorePercent, spark, table } from "../utils.js";
+import { actionMenu, badge, emptyState, initials, scorePercent, spark, table } from "../utils.js";
 import { attendancePercent, getStudent, getSubject, invoiceBalance, performanceAverage, state, studentName, subjectName, ui } from "../state.js";
 import { kpi } from "./dashboard.js";
 
 export function students() {
+  const action = ui.sectionAction.students;
+  if (!action) return actionMenu("Students", [
+    { section: "students", action: "add", icon: "user-plus", title: "Add Student" },
+    { section: "students", action: "view", icon: "list", title: "View Students" },
+    { section: "students", action: "profiles", icon: "user-round", title: "Student Profiles" },
+    { section: "students", action: "inactive", icon: "user-x", title: "Inactive Students" }
+  ]);
+  if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Student</h3><button class="btn ghost" onclick="setSectionAction('students','')">Back</button></div><button class="btn primary" onclick="openStudent()">Open student form</button></section>`;
   const rows = filteredStudents();
+  const visibleRows = action === "inactive" ? rows.filter(student => student.status === "Inactive") : rows;
   const selected = getStudent(ui.selectedStudentId) || rows[0] || state.students[0];
   if (selected) ui.selectedStudentId = selected.id;
   return `<section class="card no-print">${filters()}</section>
-  <div class="grid cols-3"><section class="card"><div class="section-title"><h3>Students</h3><button class="btn primary" onclick="openStudent()">Add</button></div><div class="timeline">${rows.map(studentListItem).join("") || emptyState("No students match these filters.")}</div></section><section class="card" style="grid-column:span 2">${profile(selected)}</section></div>`;
+  <div class="grid cols-3"><section class="card"><div class="section-title"><h3>${action === "profiles" ? "Profiles" : "Students"}</h3><button class="btn ghost" onclick="setSectionAction('students','')">Back</button></div><div class="timeline">${visibleRows.map(studentListItem).join("") || emptyState("No students match these filters.")}</div></section><section class="card" style="grid-column:span 2">${action === "view" ? table("Student list", ["Student", "Grade", "Guardian", "Status"], visibleRows.map(student => [student.name, student.grade, student.guardian, badge(student.status)])) : profile(selected)}</section></div>`;
 }
 
 function filters() {

@@ -44,6 +44,11 @@ window.go = view => {
   renderApp();
 };
 
+window.setSectionAction = (section, action) => {
+  ui.sectionAction[section] = action;
+  renderApp();
+};
+
 window.setFilter = (key, value) => {
   ui.filters[key] = value;
   renderApp();

@@ -6,19 +6,22 @@ export function invoicePrint(invoice) {
   const student = getStudent(invoice.studentId);
   const status = invoiceStatus(invoice);
   const items = invoiceItems(invoice.id);
-  return `<section class="print-doc only-printable">${watermark()}<div class="status-ribbon">${status}</div><div class="doc-content">
-    ${docHead("Invoice", invoice.id, `Invoice ${invoice.id} · ${student?.name || ""}`)}
-    <div class="grid cols-3">
-      <section class="card"><strong>Parent details</strong><p>${invoice.guardian || student?.guardian}<br>${student?.parentPhone || ""}<br>${student?.parentEmail || ""}</p></section>
-      <section class="card"><strong>Student details</strong><p>${student?.name || ""}<br>${student?.grade || ""}<br>${student?.address || ""}</p></section>
-      <section class="card"><strong>Balance due</strong><h2>${money(invoiceBalance(invoice))}</h2>${badge(status)}</section>
+  return `<section class="print-doc invoice-template only-printable">${watermark()}<div class="doc-content">
+    <header class="print-head">
+      <div>${logo("logo-doc")}<p class="muted">${state.settings.tagline}</p></div>
+      <div class="print-title"><h1>INVOICE</h1><span>${invoice.id}</span><dl><dt>Invoice Date</dt><dd>${invoice.date}</dd><dt>Due Date</dt><dd>${invoice.due}</dd><dt>Status</dt><dd>${badge(status)}</dd></dl></div>
+    </header>
+    <div class="print-info-grid">
+      <section class="print-box"><h3>Billed To</h3><p><strong>${invoice.guardian || student?.guardian}</strong><br>Parent / Guardian of<br><strong class="teal">${student?.name || ""}</strong><br>${student?.parentPhone || ""}<br>${student?.parentEmail || ""}<br>${student?.address || ""}</p></section>
+      <section class="print-box"><h3>Student Details</h3><dl><dt>Student Name</dt><dd>${student?.name || ""}</dd><dt>Grade</dt><dd>${student?.grade || ""}</dd><dt>Student ID</dt><dd>${student?.id || ""}</dd></dl></section>
     </div>
-    ${table("Line items", ["Description", "Subject", "Qty", "Rate", "Line total"], items.map(item => [item.description, subjectName(item.subjectId), item.qty, money(item.rate), money(Number(item.qty) * Number(item.rate))]))}
-    <div class="grid cols-2">
-      <section class="card"><h3>Totals</h3><p>Subtotal: <strong>${money(invoiceSubtotal(invoice.id))}</strong><br>Discount: <strong>${money(invoice.discount)}</strong><br>Total: <strong>${money(invoiceTotal(invoice))}</strong><br>Amount paid: <strong>${money(invoicePaid(invoice.id))}</strong><br>Balance: <strong>${money(invoiceBalance(invoice))}</strong></p></section>
-      <section class="card"><h3>Banking details</h3><p>${state.settings.banking}</p><p>${invoice.notes || ""}</p></section>
+    <table class="print-table"><thead><tr><th>Description</th><th>Subject</th><th>Qty</th><th>Rate (R)</th><th>Amount (R)</th></tr></thead><tbody>${items.map(item => `<tr><td>${item.description}</td><td>${subjectName(item.subjectId)}</td><td>${item.qty}</td><td>${Number(item.rate).toFixed(2)}</td><td>${(Number(item.qty) * Number(item.rate)).toFixed(2)}</td></tr>`).join("")}</tbody></table>
+    <div class="invoice-lower">
+      <section class="scan-box">${qrElement(`Invoice ${invoice.id} ${student?.name || ""}`, `qr-invoice-${invoice.id}`)}<div><h3>Scan to Pay</h3><p>Use your banking app to scan and pay<br>Reference: ${invoice.id}</p></div></section>
+      <section class="totals-box"><dl><dt>Subtotal</dt><dd>${money(invoiceSubtotal(invoice.id))}</dd><dt>Discount</dt><dd>${money(invoice.discount)}</dd><dt>Amount Paid</dt><dd>${money(invoicePaid(invoice.id))}</dd></dl><div><strong>Total Due</strong><b>${money(invoiceBalance(invoice))}</b></div></section>
     </div>
-    ${table("Payment history", ["Date", "Amount", "Method", "Reference"], state.payments.filter(payment => payment.invoiceId === invoice.id).map(payment => [payment.date, money(payment.amount), payment.method, payment.reference]))}
+    <div class="print-notes"><section><h3>Notes</h3><p>${invoice.notes || "Thank you for choosing LearnView."}</p></section><section class="bank-strip"><strong>Banking Details</strong><span>${state.settings.banking}</span></section></div>
+    <footer class="print-footer">${state.settings.phone} · ${state.settings.email} · ${state.settings.address}</footer>
   </div></section>`;
 }
 

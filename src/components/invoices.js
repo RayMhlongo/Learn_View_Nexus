@@ -1,11 +1,21 @@
-import { badge, money, table } from "../utils.js";
+import { actionMenu, badge, money, table } from "../utils.js";
 import { invoiceBalance, invoiceItems, invoicePaid, invoiceStatus, invoiceTotal, state, studentName, subjectName, ui } from "../state.js";
 import { invoicePrint } from "../print/invoice.js";
 
 export function invoices() {
+  const action = ui.sectionAction.invoices;
   const selected = state.invoices.find(invoice => invoice.id === ui.selectedInvoiceId) || state.invoices[0];
   if (selected) ui.selectedInvoiceId = selected.id;
-  return `<section class="card no-print"><div class="section-title"><h3>Invoice control</h3><div class="actions"><button class="btn primary" onclick="openInvoice()">New invoice</button><button class="btn ghost" onclick="openPayment('${selected?.id || ""}')">Record payment</button></div></div>${table("", ["Invoice", "Student", "Due", "Total", "Paid", "Balance", "Status", ""], state.invoices.map(invoice => [invoice.id, studentName(invoice.studentId), invoice.due, money(invoiceTotal(invoice)), money(invoicePaid(invoice.id)), money(invoiceBalance(invoice)), badge(invoiceStatus(invoice)), `<button class="btn ghost" onclick="selectInvoice('${invoice.id}')">View</button>`]))}</section>${invoicePrint(selected)}`;
+  if (!action) return actionMenu("Invoices", [
+    { section: "invoices", action: "generate", icon: "file-plus", title: "Generate Invoice" },
+    { section: "invoices", action: "view", icon: "list", title: "View Issued Invoices" },
+    { section: "invoices", action: "payment", icon: "banknote", title: "Record Payment" },
+    { section: "invoices", action: "settings", icon: "settings", title: "Invoice Settings" }
+  ]);
+  if (action === "generate") return `<section class="card"><div class="section-title"><h3>Generate Invoice</h3><button class="btn ghost" onclick="setSectionAction('invoices','')">Back</button></div><button class="btn primary" onclick="openInvoice()">Open guided invoice form</button></section>`;
+  if (action === "payment") return `<section class="card"><div class="section-title"><h3>Record Payment</h3><button class="btn ghost" onclick="setSectionAction('invoices','')">Back</button></div><div class="actions">${state.invoices.map(invoice => `<button class="btn ghost" onclick="openPayment('${invoice.id}')">${invoice.id}</button>`).join("")}</div></section>`;
+  if (action === "settings") return `<section class="card"><div class="section-title"><h3>Invoice Settings</h3><button class="btn ghost" onclick="setSectionAction('invoices','')">Back</button></div><p class="muted">Edit banking details, invoice prefix and print notes in Settings.</p><button class="btn primary" onclick="go('settings')">Open Settings</button></section>`;
+  return `<section class="card no-print"><div class="section-title"><h3>Issued invoices</h3><button class="btn ghost" onclick="setSectionAction('invoices','')">Back</button></div>${table("", ["Invoice", "Student", "Due", "Total", "Paid", "Balance", "Status", ""], state.invoices.map(invoice => [invoice.id, studentName(invoice.studentId), invoice.due, money(invoiceTotal(invoice)), money(invoicePaid(invoice.id)), money(invoiceBalance(invoice)), badge(invoiceStatus(invoice)), `<button class="btn ghost" onclick="selectInvoice('${invoice.id}')">View</button>`]))}</section>${invoicePrint(selected)}`;
 }
 
 export function invoiceForm(record = {}) {

@@ -76,6 +76,7 @@ export const seed = {
 export const state = loadState();
 export const ui = {
   view: "dashboard",
+  sectionAction: {},
   selectedStudentId: state.students[0]?.id || "",
   selectedInvoiceId: state.invoices[0]?.id || "",
   selectedReportId: state.reportCards[0]?.id || "",

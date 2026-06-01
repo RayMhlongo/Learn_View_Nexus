@@ -1,10 +1,20 @@
-import { badge } from "../utils.js";
+import { actionMenu, badge, table } from "../utils.js";
 import { getStudent, state, ui } from "../state.js";
 import { reportCardPrint } from "../print/reportCard.js";
 
 export function reports() {
+  const action = ui.sectionAction.reports;
   const report = state.reportCards.find(row => row.id === ui.selectedReportId) || buildDraftReport();
-  return `<section class="card no-print"><div class="section-title"><h3>Report card generator</h3><div class="actions"><button class="btn primary" onclick="openReport()">Generate report</button><button class="btn ghost" onclick="printCurrent()">Print selected</button></div></div>${reportControls(report)}</section>${reportCardPrint(report)}`;
+  if (!action) return actionMenu("Report Cards", [
+    { section: "reports", action: "generate", icon: "file-plus", title: "Generate Report Card" },
+    { section: "reports", action: "view", icon: "list", title: "View Report Cards" },
+    { section: "reports", action: "performance", icon: "trending-up", title: "Student Performance" },
+    { section: "reports", action: "settings", icon: "settings", title: "Report Settings" }
+  ]);
+  if (action === "view") return `<section class="card"><div class="section-title"><h3>Saved report cards</h3><button class="btn ghost" onclick="setSectionAction('reports','')">Back</button></div>${table("", ["Report", "Student", "Period", "Date"], state.reportCards.map(row => [row.id, getStudent(row.studentId)?.name, row.periodLabel, row.date]))}</section>`;
+  if (action === "performance") return `<section class="card"><div class="section-title"><h3>Student Performance</h3><button class="btn ghost" onclick="setSectionAction('reports','')">Back</button></div>${reportControls(report)}</section>${reportCardPrint(report)}`;
+  if (action === "settings") return `<section class="card"><div class="section-title"><h3>Report Settings</h3><button class="btn ghost" onclick="setSectionAction('reports','')">Back</button></div><p class="muted">Change term labels, comments, grading scale and print settings in Settings.</p><button class="btn primary" onclick="go('settings')">Open Settings</button></section>`;
+  return `<section class="card no-print"><div class="section-title"><h3>Generate Report Card</h3><div class="actions"><button class="btn ghost" onclick="setSectionAction('reports','')">Back</button><button class="btn primary" onclick="openReport()">Open guided form</button><button class="btn ghost" onclick="printCurrent()">Print preview</button></div></div>${reportControls(report)}</section>${reportCardPrint(report)}`;
 }
 
 function buildDraftReport() {

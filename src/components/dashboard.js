@@ -1,4 +1,4 @@
-import { barChart, icon, money, scorePercent, table } from "../utils.js";
+import { icon, money } from "../utils.js";
 import { attendancePercent, invoiceBalance, invoiceStatus, performanceAverage, state, studentName, subjectName, ui } from "../state.js";
 
 export function kpi(label, value, ic) {
@@ -9,31 +9,20 @@ export function dashboard() {
   const active = state.students.filter(student => student.status === "Active").length;
   const outstanding = state.invoices.reduce((sum, invoice) => sum + invoiceBalance(invoice), 0);
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-  return `<section class="panel"><div class="profile-hero"><div><p class="eyebrow">Client ready operations</p><h1 style="margin:0;font-size:26px;line-height:1.22">LearnView Nexus is structured for real sync, CRUD and print workflows.</h1><p class="muted">Local cache remains as offline fallback; Google Sheets can be connected from Setup.</p></div><button class="btn primary" onclick="go('setup')">${icon("database")} Connect Sheets</button></div></section>
-  <div class="grid cols-5">${kpi("Students", state.students.length, "users")}${kpi("Active", active, "user-check")}${kpi("Attendance", `${Math.round(state.students.reduce((s, x) => s + attendancePercent(x.id), 0) / state.students.length)}%`, "badge-check")}${kpi("Outstanding", money(outstanding), "receipt")}${kpi("Performance", `${Math.round(state.students.reduce((s, x) => s + performanceAverage(x.id), 0) / state.students.length)}%`, "trending-up")}</div>
-  <div class="grid cols-2">
-    <section class="card"><div class="section-title"><h3>Priority workflows</h3></div><div class="actions">${quick("students", "Student profile", "user-round")}${quick("schedule", "Schedule", "calendar-plus")}${quick("attendance", "Attendance", "clipboard-check")}${quick("invoices", "Invoice", "receipt")}${quick("reports", "Report", "file-text")}${quick("communications", "Message", "message-circle")}</div></section>
-    <section class="card"><div class="section-title"><h3>Today’s agenda</h3><span class="badge active">${today}</span></div>${agendaRows(state.schedule.filter(row => row.day === today))}</section>
-  </div>
-  <div class="grid cols-2">
-    <section class="card">${barChart("Invoice status", invoiceStatusTotals(), "money")}</section>
-    <section class="card">${table("Recent assessment signals", ["Student", "Subject", "Score", "Comment"], state.assessments.slice(-5).reverse().map(mark => [studentName(mark.studentId), subjectName(mark.subjectId), `${scorePercent(mark)}%`, mark.comment]))}</section>
-  </div>`;
+  const lessonsToday = state.schedule.filter(row => row.day === today);
+  return `<section class="panel home-welcome"><div><p class="eyebrow">Welcome back</p><h1>LearnView</h1><p class="muted">${new Date().toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${state.meta.syncStatus}</p></div><button class="btn ghost" onclick="go('setup')">${icon("database")} Sync</button></section>
+  <div class="summary-strip">${miniKpi("Students", state.students.length)}${miniKpi("Today", lessonsToday.length)}${miniKpi("Outstanding", money(outstanding))}${miniKpi("Average", `${Math.round(state.students.reduce((s, x) => s + performanceAverage(x.id), 0) / state.students.length)}%`)}</div>
+  <section class="card"><div class="section-title"><h3>Main categories</h3></div><div class="category-grid">${[
+    ["students", "Students", "users"], ["schedule", "Schedule", "calendar-days"], ["invoices", "Invoices", "receipt"], ["reports", "Report Cards", "file-text"], ["assessments", "Assessments", "clipboard-check"], ["more", "More", "grid-3x3"]
+  ].map(([view, title, ic]) => `<button class="category-card" onclick="go('${view}')">${icon(ic)}<span>${title}</span></button>`).join("")}</div></section>
+  <div class="grid cols-2"><section class="card"><div class="section-title"><h3>Next lesson</h3><span class="badge active">${today}</span></div>${agendaRows(lessonsToday.slice(0, 2))}</section><section class="card"><div class="section-title"><h3>Recent activity</h3></div><p class="muted">${state.assessments.at(-1)?.name || "No recent activity"} · ${state.messages.length} messages logged</p></section></div>`;
 }
 
-function quick(view, label, ic) {
-  return `<button class="btn primary" onclick="go('${view}')">${icon(ic)} ${label}</button>`;
+function miniKpi(label, value) {
+  return `<div class="mini-kpi"><strong>${value}</strong><span>${label}</span></div>`;
 }
 
 function agendaRows(rows) {
   if (!rows.length) return "<p class='muted'>No lessons scheduled today.</p>";
   return rows.sort((a, b) => a.start.localeCompare(b.start)).map(row => `<div class="agenda-row"><strong>${row.start}</strong><div class="lesson"><strong>${studentName(row.studentId)}</strong><br>${subjectName(row.subjectId)} · ${row.status}<br><span class="muted">${row.location}</span></div></div>`).join("");
-}
-
-function invoiceStatusTotals() {
-  return state.invoices.reduce((out, invoice) => {
-    const status = invoiceStatus(invoice);
-    out[status] = (out[status] || 0) + invoiceBalance(invoice);
-    return out;
-  }, {});
 }

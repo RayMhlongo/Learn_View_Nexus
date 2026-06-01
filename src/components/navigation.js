@@ -2,12 +2,13 @@ import { icon, logo } from "../utils.js";
 import { state, ui } from "../state.js";
 
 export const views = {
-  dashboard: { title: "Command Center", icon: "layout-dashboard" },
+  dashboard: { title: "Home", icon: "home" },
   students: { title: "Student Profiles", icon: "users" },
   schedule: { title: "Scheduling", icon: "calendar-days" },
+  invoices: { title: "Invoices", icon: "receipt" },
+  more: { title: "More", icon: "grid-3x3" },
   attendance: { title: "Attendance", icon: "user-check" },
   assessments: { title: "Assessments", icon: "clipboard-check" },
-  invoices: { title: "Invoices", icon: "receipt" },
   reports: { title: "Report Cards", icon: "file-text" },
   analytics: { title: "Business Intelligence", icon: "chart-column" },
   communications: { title: "Parent Communication", icon: "message-circle" },

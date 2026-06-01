@@ -1,7 +1,16 @@
-import { barChart, scorePercent, table } from "../utils.js";
+import { actionMenu, barChart, scorePercent, table } from "../utils.js";
 import { performanceAverage, state, studentName, subjectName } from "../state.js";
 
 export function assessments() {
+  const action = window.ui.sectionAction.assessments;
+  if (!action) return actionMenu("Assessments", [
+    { section: "assessments", action: "add", icon: "clipboard-plus", title: "Add Test Mark" },
+    { section: "assessments", action: "view", icon: "list", title: "View Marks" },
+    { section: "assessments", action: "monthly", icon: "calendar", title: "Monthly Results" },
+    { section: "assessments", action: "quarterly", icon: "calendar-days", title: "Quarterly Results" },
+    { section: "assessments", action: "averages", icon: "trending-up", title: "Student Averages" }
+  ]);
+  if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Test Mark</h3><button class="btn ghost" onclick="setSectionAction('assessments','')">Back</button></div><button class="btn primary" onclick="openAssessment()">Open mark form</button></section>`;
   const subjectData = Object.fromEntries(state.subjects.map(subject => [subject.name, averageForSubject(subject.id)]));
   return `<section class="card"><div class="section-title"><h3>Assessment history</h3><button class="btn primary" onclick="openAssessment()">Add mark</button></div>${table("", ["Student", "Subject", "Type", "Date", "Score", "Comment", ""], state.assessments.map(row => [studentName(row.studentId), subjectName(row.subjectId), row.type, row.date, `${scorePercent(row)}%`, row.comment, actions("assessments", row.id)]))}</section><section class="card">${barChart("Subject averages", subjectData, "%")}</section>`;
 }
