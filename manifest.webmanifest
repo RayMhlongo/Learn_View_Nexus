@@ -4,8 +4,8 @@
   "description": "Premium tutor management for LearnView.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f5f7f8",
-  "theme_color": "#078f98",
+  "background_color": "#f7f7f7",
+  "theme_color": "#2f3337",
   "icons": [
     {
       "src": "assets/learnview-logo.jpeg",

@@ -12,7 +12,7 @@ export function invoicePrint(invoice) {
       <div class="print-title"><h1>INVOICE</h1><span>${invoice.id}</span><dl><dt>Invoice Date</dt><dd>${invoice.date}</dd><dt>Due Date</dt><dd>${invoice.due}</dd><dt>Status</dt><dd>${badge(status)}</dd></dl></div>
     </header>
     <div class="print-info-grid">
-      <section class="print-box"><h3>Billed To</h3><p><strong>${invoice.guardian || student?.guardian}</strong><br>Parent / Guardian of<br><strong class="teal">${student?.name || ""}</strong><br>${student?.parentPhone || ""}<br>${student?.parentEmail || ""}<br>${student?.address || ""}</p></section>
+      <section class="print-box"><h3>Billed To</h3><p><strong>${invoice.guardian || student?.guardian}</strong><br>Parent / Guardian of<br><strong class="strong-value">${student?.name || ""}</strong><br>${student?.parentPhone || ""}<br>${student?.parentEmail || ""}<br>${student?.address || ""}</p></section>
       <section class="print-box"><h3>Student Details</h3><dl><dt>Student Name</dt><dd>${student?.name || ""}</dd><dt>Grade</dt><dd>${student?.grade || ""}</dd><dt>Student ID</dt><dd>${student?.id || ""}</dd></dl></section>
     </div>
     <table class="print-table"><thead><tr><th>Description</th><th>Subject</th><th>Qty</th><th>Rate (R)</th><th>Amount (R)</th></tr></thead><tbody>${items.map(item => `<tr><td>${item.description}</td><td>${subjectName(item.subjectId)}</td><td>${item.qty}</td><td>${Number(item.rate).toFixed(2)}</td><td>${(Number(item.qty) * Number(item.rate)).toFixed(2)}</td></tr>`).join("")}</tbody></table>
