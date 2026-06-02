@@ -82,6 +82,9 @@ export const ui = {
   selectedReportId: state.reportCards[0]?.id || "",
   scheduleMode: "week",
   filters: {},
+  aiMessages: [],
+  aiLoading: false,
+  aiLastContext: null,
   reportDraft: {
     studentId: state.students[0]?.id || "",
     periodType: "Term",

@@ -7,6 +7,7 @@ export const views = {
   schedule: { title: "Scheduling", icon: "calendar-days" },
   invoices: { title: "Invoices", icon: "receipt" },
   more: { title: "More", icon: "grid-3x3" },
+  ai: { title: "LearnView AI", icon: "sparkles" },
   attendance: { title: "Attendance", icon: "user-check" },
   assessments: { title: "Assessments", icon: "clipboard-check" },
   reports: { title: "Report Cards", icon: "file-text" },

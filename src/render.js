@@ -1,6 +1,7 @@
 import { renderQRCodes, refreshIcons } from "./utils.js";
 import { isAuthenticated, state, ui } from "./state.js";
 import { analytics } from "./components/analytics.js";
+import { ai } from "./components/ai.js";
 import { assessments } from "./components/assessments.js";
 import { attendance } from "./components/attendance.js";
 import { communications } from "./components/communications.js";
@@ -14,7 +15,7 @@ import { students } from "./components/students.js";
 import { subjects } from "./components/subjects.js";
 import { icon, logo } from "./utils.js";
 
-const routes = { dashboard, students, schedule, invoices, more, attendance, assessments, reports, analytics, communications, subjects, settings, setup };
+const routes = { dashboard, students, schedule, invoices, more, ai, attendance, assessments, reports, analytics, communications, subjects, settings, setup };
 
 export function renderApp() {
   const app = document.getElementById("app");
@@ -34,6 +35,7 @@ function shell() {
 
 function more() {
   const items = [
+    ["ai", "LearnView AI", "sparkles"],
     ["attendance", "Attendance", "user-check"],
     ["assessments", "Assessments", "clipboard-check"],
     ["reports", "Report Cards", "file-text"],

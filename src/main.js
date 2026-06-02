@@ -2,6 +2,8 @@ import { bulkSync, loadFromSheets, syncCollection, testConnection } from "./api.
 import { formData, safeSet, toast, uid } from "./utils.js";
 import { hasScheduleConflict, invoiceStatus, logout, login, prefixFor, removeRecord, saveState, state, ui, upsert } from "./state.js";
 import { renderApp } from "./render.js";
+import { askLearnViewAi, clearAiKey, saveAiSettings } from "./ai/openrouter.js";
+import { aiSettingsForm } from "./components/ai.js";
 import { studentForm } from "./components/students.js";
 import { subjectForm } from "./components/subjects.js";
 import { scheduleForm } from "./components/schedule.js";
@@ -98,6 +100,66 @@ window.openModal = (title, body, onSubmit) => {
 };
 
 window.closeModal = () => document.getElementById("modal").classList.remove("open");
+
+window.openAiSettings = () => {
+  window.openModal("LearnView AI Settings", aiSettingsForm(), "saveAiSettingsForm");
+};
+
+window.saveAiSettingsForm = event => {
+  event.preventDefault();
+  const key = document.getElementById("ai-api-key").value;
+  const model = document.getElementById("ai-model").value;
+  saveAiSettings(key, model);
+  window.closeModal();
+  renderApp();
+  toast("AI settings saved");
+};
+
+window.clearAiKeySetting = () => {
+  clearAiKey();
+  window.closeModal();
+  renderApp();
+  toast("OpenRouter API key removed");
+};
+
+window.sendAiMessage = async event => {
+  event.preventDefault();
+  const input = document.getElementById("ai-question");
+  const question = input.value.trim();
+  if (!question || ui.aiLoading) return;
+
+  ui.aiMessages = [...(ui.aiMessages || []), { role: "user", content: question }];
+  ui.aiLoading = true;
+  input.value = "";
+  renderApp();
+
+  try {
+    if (state.settings.apiUrl) {
+      const syncResult = await loadFromSheets();
+      if (!syncResult.ok) throw new Error(syncResult.error || "Could not refresh LearnView Nexus data before asking AI.");
+    }
+    const result = await askLearnViewAi(question);
+    ui.aiLastContext = result.context;
+    ui.aiMessages.push({ role: "assistant", content: result.answer });
+  } catch (error) {
+    ui.aiMessages.push({ role: "assistant", content: error.message || "LearnView AI could not generate a response right now." });
+  } finally {
+    ui.aiLoading = false;
+    renderApp();
+  }
+};
+
+window.clearAiChat = () => {
+  ui.aiMessages = [];
+  ui.aiLastContext = null;
+  renderApp();
+};
+
+window.refreshAiData = async () => {
+  const result = await loadFromSheets();
+  renderApp();
+  toast(result.ok ? "AI data source refreshed" : result.error || "Could not refresh data");
+};
 
 window.openStudent = () => openCrud("students");
 window.openSubject = () => openCrud("subjects");
