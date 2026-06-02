@@ -2,7 +2,7 @@ import { bulkSync, loadFromSheets, syncCollection, testConnection } from "./api.
 import { formData, safeSet, toast, uid } from "./utils.js";
 import { hasScheduleConflict, invoiceStatus, logout, login, prefixFor, removeRecord, saveState, state, ui, upsert } from "./state.js";
 import { renderApp } from "./render.js";
-import { askLearnViewAi, clearAiKey, saveAiSettings } from "./ai/openrouter.js";
+import { askLearnViewAi } from "./ai/openrouter.js";
 import { aiSettingsForm } from "./components/ai.js";
 import { studentForm } from "./components/students.js";
 import { subjectForm } from "./components/subjects.js";
@@ -31,7 +31,9 @@ window.loginSubmit = event => {
     renderApp();
     if (state.settings.apiUrl) loadFromSheets().then(renderApp);
     toast("Signed in");
-  } else toast("Incorrect password");
+  } else {
+    toast("Incorrect password");
+  }
 };
 
 window.confirmLogout = () => {
@@ -80,14 +82,18 @@ window.dropLesson = async (event, day) => {
   const id = event.dataTransfer.getData("text/plain");
   const lesson = state.schedule.find(row => row.id === id);
   if (!lesson) return;
+
   lesson.day = day;
+
   const date = new Date(lesson.date || Date.now());
   const target = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(day);
+
   if (target >= 0) {
     const current = (date.getDay() + 6) % 7;
     date.setDate(date.getDate() + (target - current));
     lesson.date = date.toISOString().slice(0, 10);
   }
+
   saveState();
   await syncCollection("schedule", "UPDATE", lesson);
   renderApp();
@@ -95,11 +101,24 @@ window.dropLesson = async (event, day) => {
 };
 
 window.openModal = (title, body, onSubmit) => {
-  document.getElementById("modal").innerHTML = `<form class="modal-card" onsubmit="${onSubmit}(event)"><div class="section-title"><h3>${title}</h3><button class="btn ghost" type="button" onclick="closeModal()">Close</button></div>${body}<div class="actions"><button class="btn primary" type="submit">Save</button></div></form>`;
+  document.getElementById("modal").innerHTML = `
+    <form class="modal-card" onsubmit="${onSubmit}(event)">
+      <div class="section-title">
+        <h3>${title}</h3>
+        <button class="btn ghost" type="button" onclick="closeModal()">Close</button>
+      </div>
+      ${body}
+      <div class="actions">
+        <button class="btn primary" type="submit">Save</button>
+      </div>
+    </form>
+  `;
   document.getElementById("modal").classList.add("open");
 };
 
-window.closeModal = () => document.getElementById("modal").classList.remove("open");
+window.closeModal = () => {
+  document.getElementById("modal").classList.remove("open");
+};
 
 window.openAiSettings = () => {
   window.openModal("LearnView AI Settings", aiSettingsForm(), "saveAiSettingsForm");
@@ -107,25 +126,23 @@ window.openAiSettings = () => {
 
 window.saveAiSettingsForm = event => {
   event.preventDefault();
-  const key = document.getElementById("ai-api-key").value;
-  const model = document.getElementById("ai-model").value;
-  saveAiSettings(key, model);
   window.closeModal();
   renderApp();
-  toast("AI settings saved");
+  toast("LearnView AI is connected through Cloudflare Worker");
 };
 
 window.clearAiKeySetting = () => {
-  clearAiKey();
   window.closeModal();
   renderApp();
-  toast("OpenRouter API key removed");
+  toast("No API key is stored inside the app");
 };
 
 window.sendAiMessage = async event => {
   event.preventDefault();
+
   const input = document.getElementById("ai-question");
   const question = input.value.trim();
+
   if (!question || ui.aiLoading) return;
 
   ui.aiMessages = [...(ui.aiMessages || []), { role: "user", content: question }];
@@ -136,13 +153,24 @@ window.sendAiMessage = async event => {
   try {
     if (state.settings.apiUrl) {
       const syncResult = await loadFromSheets();
-      if (!syncResult.ok) throw new Error(syncResult.error || "Could not refresh LearnView Nexus data before asking AI.");
+
+      if (!syncResult.ok) {
+        throw new Error(syncResult.error || "Could not refresh LearnView data before asking AI.");
+      }
     }
+
     const result = await askLearnViewAi(question);
+
     ui.aiLastContext = result.context;
-    ui.aiMessages.push({ role: "assistant", content: result.answer });
+    ui.aiMessages.push({
+      role: "assistant",
+      content: result.answer
+    });
   } catch (error) {
-    ui.aiMessages.push({ role: "assistant", content: error.message || "LearnView AI could not generate a response right now." });
+    ui.aiMessages.push({
+      role: "assistant",
+      content: error.message || "LearnView AI could not generate a response right now."
+    });
   } finally {
     ui.aiLoading = false;
     renderApp();
@@ -171,20 +199,39 @@ window.openReport = () => openCrud("reportCards");
 
 function openCrud(collection, id) {
   const record = id ? state[collection].find(item => item.id === id) : {};
-  window.openModal(`${id ? "Edit" : "New"} ${collection}`, `<input type="hidden" name="id" value="${id || ""}">${forms[collection](record || {})}`, `saveCrud_${collection}`);
+
+  window.openModal(
+    `${id ? "Edit" : "New"} ${collection}`,
+    `<input type="hidden" name="id" value="${id || ""}">${forms[collection](record || {})}`,
+    `saveCrud_${collection}`
+  );
 }
 
 Object.keys(forms).forEach(collection => {
   window[`saveCrud_${collection}`] = async event => {
     event.preventDefault();
+
     const data = formData(event.target);
     const existingId = data.id;
-    const record = { ...data, id: existingId || uid(prefixFor(collection), state[collection]) };
+    const record = {
+      ...data,
+      id: existingId || uid(prefixFor(collection), state[collection])
+    };
+
     let extraSync = null;
-    if (collection === "invoices") extraSync = saveInvoiceWithItem(record, data);
-    else upsert(collection, record);
+
+    if (collection === "invoices") {
+      extraSync = saveInvoiceWithItem(record, data);
+    } else {
+      upsert(collection, record);
+    }
+
     await syncCollection(collection, existingId ? "UPDATE" : "POST", record);
-    if (extraSync) await syncCollection("invoiceItems", extraSync.existing ? "UPDATE" : "POST", extraSync.record);
+
+    if (extraSync) {
+      await syncCollection("invoiceItems", extraSync.existing ? "UPDATE" : "POST", extraSync.record);
+    }
+
     window.closeModal();
     renderApp();
     toast(`${collection} saved`);
@@ -193,7 +240,9 @@ Object.keys(forms).forEach(collection => {
 
 function saveInvoiceWithItem(invoice, data) {
   upsert("invoices", invoice);
+
   const first = state.invoiceItems.find(item => item.invoiceId === invoice.id);
+
   const item = {
     id: first?.id || uid("IIT", state.invoiceItems),
     invoiceId: invoice.id,
@@ -202,16 +251,23 @@ function saveInvoiceWithItem(invoice, data) {
     qty: Number(data.itemQty || 1),
     rate: Number(data.itemRate || 0)
   };
+
   upsert("invoiceItems", item);
+
   ui.selectedInvoiceId = invoice.id;
   ui.sectionAction.invoices = "view";
-  return { record: item, existing: Boolean(first) };
+
+  return {
+    record: item,
+    existing: Boolean(first)
+  };
 }
 
 window.editRecord = (collection, id) => openCrud(collection, id);
 
 window.deleteRecord = async (collection, id) => {
   if (!confirm("Delete or deactivate this record?")) return;
+
   removeRecord(collection, id);
   await syncCollection(collection, "DELETE", { id });
   renderApp();
@@ -224,11 +280,20 @@ window.openPayment = invoiceId => {
 
 window.savePayment = async event => {
   event.preventDefault();
+
   const data = formData(event.target);
   const invoice = state.invoices.find(row => row.id === data.invoiceId);
-  const record = { ...data, id: uid("PAY", state.payments), studentId: invoice?.studentId, amount: Number(data.amount || 0) };
+
+  const record = {
+    ...data,
+    id: uid("PAY", state.payments),
+    studentId: invoice?.studentId,
+    amount: Number(data.amount || 0)
+  };
+
   upsert("payments", record);
   await syncCollection("payments", "POST", record);
+
   window.closeModal();
   renderApp();
   toast(`Payment recorded. Invoice is ${invoice ? invoiceStatus(invoice) : "updated"}.`);
@@ -236,16 +301,34 @@ window.savePayment = async event => {
 
 window.composeMessage = async (studentId, type) => {
   const student = state.students.find(row => row.id === studentId);
-  const due = state.invoices.filter(invoice => invoice.studentId === studentId).reduce((sum, invoice) => sum + Number(invoice.discount || 0), 0);
+
+  if (!student) {
+    toast("Student not found");
+    return;
+  }
+
   const text = {
     invoice: `Hi ${student.guardian}, this is LearnView. Please review ${student.name}'s latest invoice and payment status. Current invoice reminders are available in LearnView Nexus.`,
     attendance: `Hi ${student.guardian}, attendance update for ${student.name}: please note the current attendance record in LearnView Nexus.`,
     performance: `Hi ${student.guardian}, performance update for ${student.name}: we are monitoring progress and will focus the next lesson on key improvement areas.`
   }[type];
-  const record = { id: uid("MSG", state.messages), studentId, type, text, date: new Date().toLocaleDateString("en-ZA") };
+
+  const record = {
+    id: uid("MSG", state.messages),
+    studentId,
+    type,
+    text,
+    date: new Date().toLocaleDateString("en-ZA")
+  };
+
   upsert("messages", record);
   await syncCollection("messages", "POST", record);
-  window.openModal("WhatsApp-ready message", `<textarea readonly>${text}</textarea><p class="muted">Copy this into WhatsApp. The message is saved in the Messages log.</p>`, "closeOnly");
+
+  window.openModal(
+    "WhatsApp ready message",
+    `<textarea readonly>${text}</textarea><p class="muted">Copy this into WhatsApp. The message is saved in the Messages log.</p>`,
+    "closeOnly"
+  );
 };
 
 window.closeOnly = event => {
@@ -256,9 +339,16 @@ window.closeOnly = event => {
 window.saveSettings = async () => {
   Object.keys(state.settings).forEach(key => {
     const element = document.getElementById(`set-${key}`);
+
     if (!element) return;
-    state.settings[key] = element.value === "true" ? true : element.value === "false" ? false : element.value;
+
+    state.settings[key] = element.value === "true"
+      ? true
+      : element.value === "false"
+        ? false
+        : element.value;
   });
+
   saveState();
   await syncCollection("settings", "UPDATE", state.settings);
   renderApp();
@@ -274,25 +364,39 @@ window.saveApiUrl = () => {
 
 window.testApiUrl = async () => {
   state.settings.apiUrl = document.getElementById("api-url").value.trim();
+
   const result = await testConnection();
+
   renderApp();
   toast(result.ok ? "Connected to Google Sheets" : result.error);
 };
 
 window.syncNow = async () => {
   const result = await bulkSync();
+
   renderApp();
   toast(result.ok ? "Sync complete" : result.error);
 };
 
 window.loadSheets = async () => {
   const result = await loadFromSheets();
+
   renderApp();
   toast(result.ok ? "Loaded from Sheets" : result.error);
 };
 
 window.quickAdd = () => {
-  ({ students: window.openStudent, schedule: window.openSchedule, attendance: window.openAttendance, assessments: window.openAssessment, invoices: window.openInvoice, subjects: window.openSubject, reports: window.openReport }[ui.view] || window.openStudent)();
+  const actions = {
+    students: window.openStudent,
+    schedule: window.openSchedule,
+    attendance: window.openAttendance,
+    assessments: window.openAssessment,
+    invoices: window.openInvoice,
+    subjects: window.openSubject,
+    reports: window.openReport
+  };
+
+  (actions[ui.view] || window.openStudent)();
 };
 
 window.printCurrent = () => {
@@ -306,4 +410,7 @@ if ("serviceWorker" in navigator) {
 }
 
 renderApp();
-if (state.settings.apiUrl) loadFromSheets().then(renderApp);
+
+if (state.settings.apiUrl) {
+  loadFromSheets().then(renderApp);
+}
