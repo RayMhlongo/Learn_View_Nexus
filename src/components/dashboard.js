@@ -15,7 +15,7 @@ export function dashboard() {
   <section class="card"><div class="section-title"><h3>Main categories</h3></div><div class="category-grid">${[
     ["students", "Students", "users"], ["schedule", "Schedule", "calendar-days"], ["invoices", "Invoices", "receipt"], ["reports", "Report Cards", "file-text"], ["assessments", "Assessments", "clipboard-check"], ["more", "More", "grid-3x3"]
   ].map(([view, title, ic]) => `<button class="category-card" onclick="go('${view}')">${icon(ic)}<span>${title}</span></button>`).join("")}</div></section>
-  <div class="grid cols-2"><section class="card"><div class="section-title"><h3>Next lesson</h3><span class="badge active">${today}</span></div>${agendaRows(lessonsToday.slice(0, 2))}</section><section class="card"><div class="section-title"><h3>Recent activity</h3></div><p class="muted">${state.assessments.at(-1)?.name || "No recent activity"} · ${state.messages.length} messages logged</p></section></div>`;
+  <div class="grid cols-2"><section class="card home-next"><div class="section-title"><h3>Next lesson</h3><span class="badge">${today}</span></div>${agendaRows(lessonsToday.slice(0, 2))}</section><section class="card"><div class="section-title"><h3>Recent activity</h3></div><p class="muted">${state.assessments.at(-1)?.name || "No recent activity"} · ${state.messages.length} messages logged</p></section></div>`;
 }
 
 function miniKpi(label, value) {

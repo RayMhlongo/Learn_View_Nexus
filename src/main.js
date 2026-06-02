@@ -61,6 +61,7 @@ window.selectStudent = id => {
 
 window.selectInvoice = id => {
   ui.selectedInvoiceId = id;
+  ui.sectionAction.invoices = "view";
   renderApp();
 };
 

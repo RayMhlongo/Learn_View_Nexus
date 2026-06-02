@@ -1,4 +1,6 @@
 :root {
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Open Sans', sans-serif;
   --brand: #078f98;
   --brand-2: #13aeb8;
   --brand-3: #e5fbfc;
@@ -28,11 +30,30 @@ body {
     linear-gradient(180deg, rgba(7,143,152,.06), transparent 360px),
     var(--canvas);
   color: var(--ink);
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   letter-spacing: 0;
 }
 button, input, select, textarea { font: inherit; }
+h1, h2, h3, h4, h5, h6,
+.app-title, .page-title, .section-title, .card-title,
+.nav-item, button, .badge, label, th,
+.brand-title, .tagline, .eyebrow, .kpi .value,
+.mini-kpi strong, .category-card span, .doc-title,
+.print-title h1, .print-title > span,
+.print-box h3, .scan-box h3, .print-notes h3,
+.metric-box strong, .metric-box span,
+.modal-card .section-title {
+  font-family: var(--font-heading);
+}
+p, dd, td, input, select, textarea,
+.muted, .login-copy, .sidebar-card,
+.category-card small, .lesson, .agenda-row,
+.print-title dt, .print-title dd,
+.print-box, .scan-box, .totals-box,
+.bank-strip, .print-footer {
+  font-family: var(--font-body);
+}
 button { cursor: pointer; }
 img { max-width: 100%; display: block; }
 .hidden { display: none !important; }
@@ -352,6 +373,12 @@ th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spa
   box-shadow: 0 8px 18px rgba(7,143,152,.08);
 }
 .lesson.conflict { border-left-color: var(--bad); background: #fff2f4; }
+.home-next .lesson {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  box-shadow: none;
+}
 .agenda-row {
   display: grid;
   grid-template-columns: 92px 1fr;
