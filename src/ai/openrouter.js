@@ -1,67 +1,117 @@
 import { buildRelevantContext, SYSTEM_PROMPT } from "./context.js";
 import { safeGet, safeRemove, safeSet } from "../utils.js";
 
-const API_KEY_STORAGE = "learnview-openrouter-api-key";
-const MODEL_STORAGE = "learnview-openrouter-model";
-const DEFAULT_MODEL = "openrouter/auto";
+const WORKER_URL_STORAGE = "learnview-cloudflare-worker-url";
+
+const FREE_MODELS = [
+  "openrouter/free",
+  "meta-llama/llama-3.1-8b-instruct:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "google/gemma-2-9b-it:free",
+  "mistralai/mistral-7b-instruct:free",
+  "qwen/qwen-2.5-7b-instruct:free"
+];
 
 export function getAiSettings() {
+  const workerUrl = safeGet(localStorage, WORKER_URL_STORAGE) || "";
+
   return {
-    hasApiKey: Boolean(safeGet(localStorage, API_KEY_STORAGE)),
-    model: safeGet(localStorage, MODEL_STORAGE) || DEFAULT_MODEL
+    hasWorkerUrl: Boolean(workerUrl),
+    workerUrl,
+    model: "Auto free model"
   };
 }
 
-export function saveAiSettings(apiKey, model = DEFAULT_MODEL) {
-  const trimmedKey = apiKey.trim();
-  if (trimmedKey) safeSet(localStorage, API_KEY_STORAGE, trimmedKey);
-  safeSet(localStorage, MODEL_STORAGE, model.trim() || DEFAULT_MODEL);
+export function saveAiSettings(workerUrl) {
+  const trimmedUrl = workerUrl.trim();
+
+  if (!trimmedUrl) {
+    throw new Error("Add your Cloudflare Worker URL before saving AI settings.");
+  }
+
+  safeSet(localStorage, WORKER_URL_STORAGE, trimmedUrl);
 }
 
 export function clearAiKey() {
-  safeRemove(localStorage, API_KEY_STORAGE);
+  safeRemove(localStorage, WORKER_URL_STORAGE);
 }
 
-export async function askLearnViewAi(question) {
-  const apiKey = safeGet(localStorage, API_KEY_STORAGE);
-  if (!apiKey) throw new Error("Add your OpenRouter API key in AI Settings before sending a question.");
-
-  const context = buildRelevantContext(question);
-  if (!context.hasData) throw new Error("No relevant LearnView Nexus data is available for that question.");
-
-  const model = safeGet(localStorage, MODEL_STORAGE) || DEFAULT_MODEL;
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+async function callWorker(workerUrl, messages, model) {
+  const response = await fetch(workerUrl, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "HTTP-Referer": location.origin,
-      "X-Title": "LearnView Nexus"
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            `Tutor question: ${question}`,
-            "Use only the structured LearnView Nexus data below. If the answer cannot be found in this data, say what is unavailable.",
-            JSON.stringify(context, null, 2)
-          ].join("\n\n")
-        }
-      ],
-      temperature: 0.2
+      messages
     })
   });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `OpenRouter request failed with status ${response.status}.`);
+  const text = await response.text();
+  let data;
+
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { error: text };
   }
 
-  const data = await response.json();
-  const answer = data.choices?.[0]?.message?.content?.trim();
-  if (!answer) throw new Error("The selected OpenRouter model did not return a response.");
-  return { answer, context };
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      data?.details?.error?.message ||
+      data?.details?.message ||
+      `Cloudflare Worker request failed with status ${response.status}.`
+    );
+  }
+
+  return data;
+}
+
+export async function askLearnViewAi(question) {
+  const workerUrl = safeGet(localStorage, WORKER_URL_STORAGE);
+
+  if (!workerUrl) {
+    throw new Error("Add your Cloudflare Worker URL in AI Settings before sending a question.");
+  }
+
+  const context = buildRelevantContext(question);
+
+  if (!context.hasData) {
+    throw new Error("No relevant LearnView Nexus data is available for that question.");
+  }
+
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "user",
+      content: [
+        `Tutor question: ${question}`,
+        "Use only the structured LearnView Nexus data below. If the answer cannot be found in this data, say what is unavailable.",
+        JSON.stringify(context, null, 2)
+      ].join("\n\n")
+    }
+  ];
+
+  let lastError = null;
+
+  for (const model of FREE_MODELS) {
+    try {
+      const data = await callWorker(workerUrl, messages, model);
+      const answer = data.choices?.[0]?.message?.content?.trim();
+
+      if (answer) {
+        return { answer, context, modelUsed: model };
+      }
+
+      lastError = new Error(`The model ${model} did not return a response.`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.error("All free AI models failed:", lastError);
+
+  throw new Error("All free AI models are currently unavailable. Please try again later.");
 }
