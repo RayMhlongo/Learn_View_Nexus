@@ -4,11 +4,9 @@ const WORKER_URL = "https://learnview.rodgersmhlongo.workers.dev";
 
 const FREE_MODELS = [
   "openrouter/free",
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "google/gemma-2-9b-it:free",
-  "mistralai/mistral-7b-instruct:free",
-  "qwen/qwen-2.5-7b-instruct:free"
+  "nvidia/nemotron-3-super-49b-v1.5:free",
+  "openai/gpt-oss-120b:free",
+  "z-ai/glm-4.5-air:free"
 ];
 
 export function getAiSettings() {
