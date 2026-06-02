@@ -1,189 +1,432 @@
+const API_VERSION = "2026-06-02";
+
 const SCHEMA = {
-  Settings: ["ID","businessName","tagline","tutorName","phone","email","address","banking","rate","prefix","terms","availability","apiUrl","adminPassword","setupComplete","CreatedAt","UpdatedAt"],
-  Subjects: ["id","name","description","gradeRange","price","status","CreatedAt","UpdatedAt"],
-  Students: ["id","name","grade","guardian","parentPhone","parentEmail","studentPhone","address","subjectIds","startDate","frequency","days","time","paymentType","status","photo","availabilityNotes","notes","CreatedAt","UpdatedAt"],
-  Schedule: ["id","studentId","subjectId","day","date","start","end","recurring","status","type","location","notes","CreatedAt","UpdatedAt"],
-  Attendance: ["id","studentId","subjectId","scheduleId","date","status","notes","CreatedAt","UpdatedAt"],
-  Assessments: ["id","studentId","subjectId","type","name","date","term","mark","total","comment","CreatedAt","UpdatedAt"],
-  Invoices: ["id","date","due","studentId","guardian","discount","notes","CreatedAt","UpdatedAt"],
-  InvoiceItems: ["id","invoiceId","subjectId","description","qty","rate","CreatedAt","UpdatedAt"],
-  Payments: ["id","invoiceId","studentId","date","amount","method","reference","CreatedAt","UpdatedAt"],
-  ReportCards: ["id","studentId","periodType","periodLabel","startDate","endDate","subjectIds","tutorComments","subjectComments","date","CreatedAt","UpdatedAt"],
-  Messages: ["id","studentId","type","text","date","CreatedAt","UpdatedAt"]
+  Settings: ["ID", "businessName", "tagline", "tutorName", "phone", "email", "address", "banking", "rate", "prefix", "terms", "availability", "apiUrl", "adminPassword", "setupComplete", "CreatedAt", "UpdatedAt"],
+  Subjects: ["id", "name", "description", "gradeRange", "price", "status", "CreatedAt", "UpdatedAt"],
+  Students: ["id", "name", "grade", "guardian", "parentPhone", "parentEmail", "studentPhone", "address", "subjectIds", "startDate", "frequency", "days", "time", "paymentType", "status", "photo", "availabilityNotes", "notes", "CreatedAt", "UpdatedAt"],
+  Schedule: ["id", "studentId", "subjectId", "day", "date", "start", "end", "recurring", "status", "type", "location", "notes", "CreatedAt", "UpdatedAt"],
+  Attendance: ["id", "studentId", "subjectId", "scheduleId", "date", "status", "notes", "CreatedAt", "UpdatedAt"],
+  Assessments: ["id", "studentId", "subjectId", "type", "name", "date", "term", "mark", "total", "comment", "CreatedAt", "UpdatedAt"],
+  Invoices: ["id", "date", "due", "studentId", "guardian", "discount", "notes", "CreatedAt", "UpdatedAt"],
+  InvoiceItems: ["id", "invoiceId", "subjectId", "description", "qty", "rate", "CreatedAt", "UpdatedAt"],
+  Payments: ["id", "invoiceId", "studentId", "date", "amount", "method", "reference", "CreatedAt", "UpdatedAt"],
+  ReportCards: ["id", "studentId", "periodType", "periodLabel", "startDate", "endDate", "subjectIds", "tutorComments", "subjectComments", "date", "CreatedAt", "UpdatedAt"],
+  Messages: ["id", "studentId", "type", "text", "date", "CreatedAt", "UpdatedAt"]
 };
 
-function doGet() {
-  return json({ ok: true, message: "LearnView Nexus Apps Script API is online.", sheets: Object.keys(SCHEMA) });
+const PREFIXES = {
+  Subjects: "SUB",
+  Students: "STU",
+  Schedule: "SCH",
+  Attendance: "ATT",
+  Assessments: "ASM",
+  Invoices: "LVN",
+  InvoiceItems: "IIT",
+  Payments: "PAY",
+  ReportCards: "RPT",
+  Messages: "MSG"
+};
+
+const REQUIRED = {
+  Subjects: ["name"],
+  Students: ["name"],
+  Schedule: ["studentId", "subjectId", "date", "start", "end"],
+  Attendance: ["studentId", "subjectId", "date", "status"],
+  Assessments: ["studentId", "subjectId", "name", "mark", "total"],
+  Invoices: ["studentId", "date", "due"],
+  InvoiceItems: ["invoiceId", "description", "qty", "rate"],
+  Payments: ["invoiceId", "amount"],
+  ReportCards: ["studentId"]
+};
+
+function doGet(e) {
+  try {
+    setupSheets();
+    const params = e && e.parameter ? e.parameter : {};
+    if (params.sheet) {
+      const sheetName = canonicalSheetName(params.sheet);
+      const data = params.id ? getRecord(sheetName, params.id) : listRecords(sheetName);
+      return json({ ok: true, version: API_VERSION, sheet: sheetName, data: data });
+    }
+    return json({
+      ok: true,
+      version: API_VERSION,
+      message: "LearnView Nexus Apps Script API is online.",
+      sheets: Object.keys(SCHEMA)
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
 }
 
 function doPost(e) {
   try {
-    const req = JSON.parse(e.postData.contents || "{}");
+    const request = parseRequest(e);
     setupSheets();
-    return json(route(req));
+    return json(route(request));
   } catch (error) {
-    return json({ ok: false, error: error.message });
+    return jsonError(error);
   }
 }
 
-function route(req) {
-  const action = String(req.action || "GET").toUpperCase();
-  if (action === "TEST") return { ok: true, message: "Connected", timestamp: new Date().toISOString() };
-  if (action === "BULK_READ") return { ok: true, data: bulkRead() };
-  if (action === "BULK_SYNC") return { ok: true, data: bulkSync(req.payload || {}) };
-  const sheetName = req.sheet;
-  if (!SCHEMA[sheetName]) throw new Error("Unknown sheet: " + sheetName);
-  const sheet = SpreadsheetApp.getActive().getSheetByName(sheetName);
-  if (action === "GET") return { ok: true, data: readRows(sheet) };
-  if (action === "POST") return { ok: true, data: appendRow(sheet, req.payload || {}) };
-  if (action === "UPDATE") return { ok: true, data: updateRow(sheet, req.payload || {}) };
-  if (action === "DELETE") return { ok: true, data: deleteOrDeactivate(sheet, req.payload || {}) };
-  throw new Error("Unsupported action: " + action);
+function route(request) {
+  const action = normalizeAction(request.action);
+  if (action === "TEST") return { ok: true, version: API_VERSION, message: "Connected", timestamp: nowIso() };
+  if (action === "INIT") return { ok: true, version: API_VERSION, sheets: setupSheets(), data: bulkRead() };
+  if (action === "SCHEMA") return { ok: true, version: API_VERSION, schema: SCHEMA };
+  if (action === "BULK_READ") return { ok: true, version: API_VERSION, data: bulkRead() };
+  if (action === "BULK_SYNC") return withLock(function () {
+    return { ok: true, version: API_VERSION, data: bulkSync(request.payload || {}) };
+  });
+
+  const sheetName = canonicalSheetName(request.sheet);
+  const payload = request.payload || {};
+
+  if (action === "READ") return { ok: true, version: API_VERSION, sheet: sheetName, data: payload.id ? getRecord(sheetName, payload.id) : listRecords(sheetName) };
+  if (action === "CREATE") return withLock(function () {
+    return { ok: true, version: API_VERSION, sheet: sheetName, data: createRecord(sheetName, payload) };
+  });
+  if (action === "UPDATE") return withLock(function () {
+    return { ok: true, version: API_VERSION, sheet: sheetName, data: updateRecord(sheetName, payload) };
+  });
+  if (action === "UPSERT") return withLock(function () {
+    return { ok: true, version: API_VERSION, sheet: sheetName, data: upsertRecord(sheetName, payload) };
+  });
+  if (action === "DELETE") return withLock(function () {
+    return { ok: true, version: API_VERSION, sheet: sheetName, data: deleteRecord(sheetName, payload) };
+  });
+
+  throw new Error("Unsupported action: " + request.action);
+}
+
+function setupSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return Object.keys(SCHEMA).map(function (name) {
+    let sheet = ss.getSheetByName(name);
+    if (!sheet) sheet = ss.insertSheet(name);
+    repairHeaders(sheet, SCHEMA[name]);
+    freezeAndResize(sheet);
+    return name;
+  });
+}
+
+function repairHeaders(sheet, expected) {
+  const currentWidth = Math.max(sheet.getLastColumn(), expected.length, 1);
+  const existing = sheet.getRange(1, 1, 1, currentWidth).getValues()[0].filter(function (header) {
+    return header !== "";
+  });
+  const headers = existing.length ? existing.slice() : [];
+  expected.forEach(function (header) {
+    if (headers.indexOf(header) === -1) headers.push(header);
+  });
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+}
+
+function freezeAndResize(sheet) {
+  sheet.setFrozenRows(1);
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn > 0) sheet.autoResizeColumns(1, lastColumn);
+}
+
+function bulkRead() {
+  const data = {};
+  Object.keys(SCHEMA).forEach(function (sheetName) {
+    data[sheetName] = listRecords(sheetName);
+  });
+  return data;
+}
+
+function bulkSync(payload) {
+  Object.keys(SCHEMA).forEach(function (sheetName) {
+    if (!Object.prototype.hasOwnProperty.call(payload, sheetName)) return;
+    const rows = Array.isArray(payload[sheetName]) ? payload[sheetName] : [];
+    replaceSheetData(sheetName, rows);
+  });
+  return bulkRead();
+}
+
+function replaceSheetData(sheetName, rows) {
+  const sheet = sheetFor(sheetName);
+  clearRows(sheet);
+  rows.forEach(function (row) {
+    createRecord(sheetName, row, true);
+  });
+}
+
+function listRecords(sheetName) {
+  const sheet = sheetFor(sheetName);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  const headers = values[0];
+  return values.slice(1).filter(rowHasData).map(function (row) {
+    return rowToObject(headers, row);
+  });
+}
+
+function getRecord(sheetName, id) {
+  const found = findRecord(sheetName, id);
+  if (!found) throw new Error(sheetName + " record not found: " + id);
+  return rowToObject(found.headers, found.row);
+}
+
+function createRecord(sheetName, payload, preserveTimestamps) {
+  validatePayload(sheetName, payload, false);
+  const sheet = sheetFor(sheetName);
+  const headers = headersFor(sheet);
+  const now = new Date();
+  const record = normalizeRecord(sheetName, payload);
+  const idHeader = idHeaderFor(sheetName);
+
+  if (!record[idHeader]) record[idHeader] = sheetName === "Settings" ? "settings" : nextId(sheetName);
+  if (findRecord(sheetName, record[idHeader])) throw new Error(sheetName + " record already exists: " + record[idHeader]);
+  if (!preserveTimestamps || !record.CreatedAt) record.CreatedAt = now;
+  record.UpdatedAt = now;
+
+  sheet.appendRow(headers.map(function (header) {
+    return serialize(record[header]);
+  }));
+  return recordForResponse(record);
+}
+
+function updateRecord(sheetName, payload) {
+  validatePayload(sheetName, payload, true);
+  const idHeader = idHeaderFor(sheetName);
+  const id = payload[idHeader] || payload.id || (sheetName === "Settings" ? "settings" : "");
+  if (!id) throw new Error(idHeader + " is required for update");
+
+  const found = findRecord(sheetName, id);
+  if (!found) return createRecord(sheetName, payload);
+
+  const record = normalizeRecord(sheetName, payload);
+  found.headers.forEach(function (header, index) {
+    if (header === "CreatedAt") return;
+    if (header === "UpdatedAt") {
+      found.sheet.getRange(found.rowNumber, index + 1).setValue(new Date());
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(record, header)) {
+      found.sheet.getRange(found.rowNumber, index + 1).setValue(serialize(record[header]));
+    }
+  });
+  return getRecord(sheetName, id);
+}
+
+function upsertRecord(sheetName, payload) {
+  const idHeader = idHeaderFor(sheetName);
+  const id = payload[idHeader] || payload.id || (sheetName === "Settings" ? "settings" : "");
+  return id && findRecord(sheetName, id) ? updateRecord(sheetName, payload) : createRecord(sheetName, payload);
+}
+
+function deleteRecord(sheetName, payload) {
+  const idHeader = idHeaderFor(sheetName);
+  const id = payload[idHeader] || payload.id;
+  if (!id) throw new Error(idHeader + " is required for delete");
+
+  const found = findRecord(sheetName, id);
+  if (!found) throw new Error(sheetName + " record not found: " + id);
+
+  const statusIndex = found.headers.indexOf("status");
+  if (statusIndex >= 0) {
+    found.sheet.getRange(found.rowNumber, statusIndex + 1).setValue("Inactive");
+    const updatedAtIndex = found.headers.indexOf("UpdatedAt");
+    if (updatedAtIndex >= 0) found.sheet.getRange(found.rowNumber, updatedAtIndex + 1).setValue(new Date());
+    return getRecord(sheetName, id);
+  }
+
+  found.sheet.deleteRow(found.rowNumber);
+  return { id: id, deleted: true };
+}
+
+function findRecord(sheetName, id) {
+  const sheet = sheetFor(sheetName);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0];
+  const idHeader = idHeaderFor(sheetName);
+  const idIndex = headers.indexOf(idHeader);
+  if (idIndex < 0) throw new Error(sheetName + " is missing ID column: " + idHeader);
+
+  for (let index = 1; index < values.length; index++) {
+    if (String(values[index][idIndex]) === String(id)) {
+      return { sheet: sheet, headers: headers, row: values[index], rowNumber: index + 1 };
+    }
+  }
+  return null;
+}
+
+function normalizeRecord(sheetName, payload) {
+  const record = Object.assign({}, payload);
+  if (sheetName === "Settings") {
+    record.ID = record.ID || record.id || "settings";
+    delete record.id;
+  }
+  if (sheetName !== "Settings" && record.ID && !record.id) {
+    record.id = record.ID;
+    delete record.ID;
+  }
+  return record;
+}
+
+function validatePayload(sheetName, payload, partial) {
+  if (!payload || typeof payload !== "object") throw new Error("payload must be an object");
+  const required = REQUIRED[sheetName] || [];
+  required.forEach(function (field) {
+    if (!partial && isBlank(payload[field])) throw new Error(sheetName + " requires " + field);
+  });
+}
+
+function nextId(sheetName) {
+  const prefix = sheetName === "Invoices" ? invoicePrefix() : PREFIXES[sheetName] || "REC";
+  const sheet = sheetFor(sheetName);
+  const headers = headersFor(sheet);
+  const idIndex = headers.indexOf(idHeaderFor(sheetName));
+  const values = sheet.getLastRow() > 1 ? sheet.getRange(2, idIndex + 1, sheet.getLastRow() - 1, 1).getValues() : [];
+  const highest = values.reduce(function (max, row) {
+    const value = String(row[0] || "");
+    const match = value.match(/(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return prefix + "-" + String(highest + 1).padStart(4, "0");
+}
+
+function invoicePrefix() {
+  try {
+    const settings = listRecords("Settings")[0] || {};
+    return settings.prefix || PREFIXES.Invoices;
+  } catch (error) {
+    return PREFIXES.Invoices;
+  }
+}
+
+function sheetFor(sheetName) {
+  const name = canonicalSheetName(sheetName);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  if (!sheet) throw new Error("Sheet not found: " + name + ". Run INIT first.");
+  return sheet;
+}
+
+function canonicalSheetName(sheetName) {
+  const normalized = String(sheetName || "").trim().toLowerCase();
+  const found = Object.keys(SCHEMA).find(function (name) {
+    return name.toLowerCase() === normalized;
+  });
+  if (!found) throw new Error("Unknown sheet: " + sheetName);
+  return found;
+}
+
+function headersFor(sheet) {
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+}
+
+function idHeaderFor(sheetName) {
+  return sheetName === "Settings" ? "ID" : "id";
+}
+
+function clearRows(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastColumn).clearContent();
+}
+
+function rowToObject(headers, row) {
+  const record = {};
+  headers.forEach(function (header, index) {
+    if (!header) return;
+    record[header] = parseCell(row[index]);
+  });
+  return recordForResponse(record);
+}
+
+function recordForResponse(record) {
+  const out = Object.assign({}, record);
+  ["CreatedAt", "UpdatedAt"].forEach(function (field) {
+    if (out[field] instanceof Date) out[field] = out[field].toISOString();
+  });
+  return out;
+}
+
+function rowHasData(row) {
+  return row.some(function (value) {
+    return value !== "" && value !== null;
+  });
+}
+
+function normalizeAction(action) {
+  const value = String(action || "READ").trim().toUpperCase();
+  const aliases = {
+    GET: "READ",
+    LIST: "READ",
+    READ_ONE: "READ",
+    POST: "CREATE",
+    CREATE: "CREATE",
+    ADD: "CREATE",
+    PUT: "UPDATE",
+    PATCH: "UPDATE",
+    UPDATE: "UPDATE",
+    UPSERT: "UPSERT",
+    DELETE: "DELETE",
+    REMOVE: "DELETE",
+    TEST: "TEST",
+    INIT: "INIT",
+    SETUP: "INIT",
+    SCHEMA: "SCHEMA",
+    BULK_READ: "BULK_READ",
+    BULK_SYNC: "BULK_SYNC"
+  };
+  return aliases[value] || value;
+}
+
+function parseRequest(e) {
+  if (!e || !e.postData || !e.postData.contents) return {};
+  return JSON.parse(e.postData.contents);
+}
+
+function serialize(value) {
+  if (value === undefined || value === null) return "";
+  if (value instanceof Date) return value;
+  if (Array.isArray(value) || typeof value === "object") return JSON.stringify(value);
+  return value;
+}
+
+function parseCell(value) {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if ((trimmed.charAt(0) === "[" && trimmed.charAt(trimmed.length - 1) === "]") || (trimmed.charAt(0) === "{" && trimmed.charAt(trimmed.length - 1) === "}")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (error) {
+      return value;
+    }
+  }
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  return value;
+}
+
+function isBlank(value) {
+  return value === undefined || value === null || String(value).trim() === "";
+}
+
+function withLock(callback) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function json(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function setupSheets() {
-  const ss = SpreadsheetApp.getActive();
-  Object.keys(SCHEMA).forEach(name => {
-    let sheet = ss.getSheetByName(name);
-    if (!sheet) sheet = ss.insertSheet(name);
-    repairHeaders(sheet, SCHEMA[name]);
-  });
+function jsonError(error) {
+  return json({ ok: false, version: API_VERSION, error: error.message || String(error) });
 }
 
-function repairHeaders(sheet, expected) {
-  const lastCol = Math.max(sheet.getLastColumn(), 1);
-  const existing = sheet.getRange(1, 1, 1, lastCol).getValues()[0].filter(Boolean);
-  if (!existing.length) {
-    sheet.getRange(1, 1, 1, expected.length).setValues([expected]);
-    return;
-  }
-  const missing = expected.filter(header => existing.indexOf(header) === -1);
-  if (missing.length) sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
-}
-
-function bulkRead() {
-  const out = {};
-  Object.keys(SCHEMA).forEach(name => {
-    out[name] = readRows(SpreadsheetApp.getActive().getSheetByName(name));
-  });
-  return out;
-}
-
-function bulkSync(payload) {
-  Object.keys(SCHEMA).forEach(name => {
-    if (!payload[name]) return;
-    const sheet = SpreadsheetApp.getActive().getSheetByName(name);
-    clearData(sheet);
-    payload[name].forEach(row => appendRow(sheet, row));
-  });
-  return bulkRead();
-}
-
-function clearData(sheet) {
-  if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
-}
-
-function readRows(sheet) {
-  const values = sheet.getDataRange().getValues();
-  const headers = values.shift() || [];
-  return values.filter(row => row.some(Boolean)).map(row => {
-    const object = {};
-    headers.forEach((header, index) => object[header] = parseCell(row[index]));
-    return object;
-  });
-}
-
-function appendRow(sheet, payload) {
-  validate(sheet.getName(), payload, false);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const now = new Date();
-  const record = Object.assign({}, payload);
-  if (!record.id && sheet.getName() !== "Settings") record.id = generateId(sheet.getName());
-  if (sheet.getName() === "Settings" && !record.ID) record.ID = "settings";
-  const row = headers.map(header => {
-    if (header === "CreatedAt" || header === "UpdatedAt") return now;
-    return serialize(record[header]);
-  });
-  sheet.appendRow(row);
-  return record;
-}
-
-function updateRow(sheet, payload) {
-  validate(sheet.getName(), payload, true);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const idHeader = sheet.getName() === "Settings" ? "ID" : "id";
-  const id = payload[idHeader] || payload.id || "settings";
-  const idCol = headers.indexOf(idHeader);
-  const values = sheet.getDataRange().getValues();
-  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
-    if (String(values[rowIndex][idCol]) === String(id)) {
-      headers.forEach((header, colIndex) => {
-        if (header === "UpdatedAt") sheet.getRange(rowIndex + 1, colIndex + 1).setValue(new Date());
-        else if (payload[header] !== undefined) sheet.getRange(rowIndex + 1, colIndex + 1).setValue(serialize(payload[header]));
-      });
-      return payload;
-    }
-  }
-  return appendRow(sheet, payload);
-}
-
-function deleteOrDeactivate(sheet, payload) {
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const idHeader = sheet.getName() === "Settings" ? "ID" : "id";
-  const id = payload[idHeader] || payload.id;
-  if (!id) throw new Error("id is required for delete");
-  const idCol = headers.indexOf(idHeader);
-  const statusCol = headers.indexOf("status");
-  const values = sheet.getDataRange().getValues();
-  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
-    if (String(values[rowIndex][idCol]) === String(id)) {
-      if (statusCol >= 0) sheet.getRange(rowIndex + 1, statusCol + 1).setValue("Inactive");
-      else sheet.deleteRow(rowIndex + 1);
-      return { id };
-    }
-  }
-  throw new Error("Record not found: " + id);
-}
-
-function validate(sheetName, payload, update) {
-  const required = {
-    Subjects: ["name"],
-    Students: ["name"],
-    Schedule: ["studentId","subjectId","date","start","end"],
-    Attendance: ["studentId","subjectId","date","status"],
-    Assessments: ["studentId","subjectId","name","mark","total"],
-    Invoices: ["studentId","date","due"],
-    InvoiceItems: ["invoiceId","description","qty","rate"],
-    Payments: ["invoiceId","amount"],
-    ReportCards: ["studentId"],
-    Messages: ["studentId","text"]
-  }[sheetName] || [];
-  required.forEach(field => {
-    if (!update && (payload[field] === undefined || payload[field] === "")) throw new Error(sheetName + " requires " + field);
-  });
-}
-
-function generateId(sheetName) {
-  const prefix = { Subjects: "SUB", Students: "STU", Schedule: "SCH", Attendance: "ATT", Assessments: "ASM", Invoices: "LVN", InvoiceItems: "IIT", Payments: "PAY", ReportCards: "RPT", Messages: "MSG" }[sheetName] || "REC";
-  const sheet = SpreadsheetApp.getActive().getSheetByName(sheetName);
-  const next = Math.max(1, sheet.getLastRow());
-  return prefix + "-" + String(next).padStart(4, "0");
-}
-
-function serialize(value) {
-  if (Array.isArray(value) || typeof value === "object" && value !== null) return JSON.stringify(value);
-  return value === undefined ? "" : value;
-}
-
-function parseCell(value) {
-  if (typeof value !== "string") return value;
-  const trimmed = value.trim();
-  if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
-    try { return JSON.parse(trimmed); } catch (error) {}
-  }
-  return value;
+function nowIso() {
+  return new Date().toISOString();
 }
