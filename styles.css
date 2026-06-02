@@ -276,6 +276,11 @@ input:focus, select:focus, textarea:focus {
   color: var(--accent);
 }
 .toolbar { display: grid; grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(150px, .6fr)); gap: 14px; }
+.attendance-filter { padding: 16px; }
+.compact-field {
+  max-width: 320px;
+  margin: 0;
+}
 .table-wrap { overflow: auto; }
 table { width: 100%; border-collapse: collapse; min-width: 760px; }
 th, td { padding: 12px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; }
@@ -742,7 +747,7 @@ th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spa
   .mobile-brand { display: flex; }
   .topbar { padding: 12px 16px; align-items: flex-start; }
   .topbar h2 { font-size: 23px; }
-  .topbar .actions .btn:not(.primary) { display: none; }
+  .topbar .actions .btn:not(.primary):not(.back-btn) { display: none; }
   .page { padding: 14px; gap: 14px; }
   .card, .panel { padding: 16px; border-radius: 18px; }
   .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -758,6 +763,7 @@ th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spa
   .calendar-week, .calendar-month { grid-template-columns: 1fr; }
   .availability { grid-template-columns: repeat(2, 1fr); }
   .bar-row { grid-template-columns: 1fr; }
+  .compact-field { max-width: none; }
   .ai-shell { min-height: calc(100vh - 166px); grid-template-rows: auto minmax(280px, 1fr) auto auto; }
   .ai-conversation { min-height: 300px; max-height: none; padding: 12px; }
   .ai-message { width: 94%; border-radius: 16px; padding: 12px; }

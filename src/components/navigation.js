@@ -24,5 +24,5 @@ export function sidebar() {
 
 export function topbar() {
   const view = views[ui.view];
-  return `<header class="topbar"><div><div class="mobile-brand">${logo("logo-mini")}<strong>LearnView</strong></div><h2>${view.title}</h2><p>${state.settings.businessName} · ${state.settings.tagline} · ${state.meta.syncStatus}</p></div><div class="actions"><button class="btn ghost" onclick="printCurrent()">${icon("printer")} Print</button><button class="btn" onclick="confirmLogout()">${icon("log-out")} Exit</button></div></header>`;
+  return `<header class="topbar"><div><div class="mobile-brand">${logo("logo-mini")}<strong>LearnView</strong></div><h2>${view.title}</h2><p>${state.settings.businessName} - ${state.settings.tagline} - ${state.meta.syncStatus}</p></div><div class="actions"><button class="btn ghost back-btn" onclick="navigateBack()">${icon("arrow-left")} Back</button><button class="btn ghost" onclick="printCurrent()">${icon("printer")} Print</button><button class="btn" onclick="confirmLogout()">${icon("log-out")} Exit</button></div></header>`;
 }

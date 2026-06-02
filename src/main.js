@@ -25,10 +25,93 @@ const forms = {
 window.ui = ui;
 window.renderApp = renderApp;
 
+function screenSnapshot() {
+  return {
+    view: ui.view,
+    sectionAction: { ...ui.sectionAction },
+    selectedStudentId: ui.selectedStudentId,
+    selectedInvoiceId: ui.selectedInvoiceId,
+    selectedReportId: ui.selectedReportId,
+    scheduleMode: ui.scheduleMode,
+    filters: { ...ui.filters }
+  };
+}
+
+function sameScreen(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function applyScreen(screen) {
+  if (!screen) return;
+  ui.view = screen.view || "dashboard";
+  ui.sectionAction = { ...(screen.sectionAction || {}) };
+  ui.selectedStudentId = screen.selectedStudentId || ui.selectedStudentId;
+  ui.selectedInvoiceId = screen.selectedInvoiceId || ui.selectedInvoiceId;
+  ui.selectedReportId = screen.selectedReportId || ui.selectedReportId;
+  ui.scheduleMode = screen.scheduleMode || "week";
+  ui.filters = { ...(screen.filters || {}) };
+}
+
+function pushScreen(next) {
+  const current = screenSnapshot();
+  if (sameScreen(current, next)) return false;
+  ui.navigationStack.push(current);
+  applyScreen(next);
+  history.pushState({ learnview: true, screen: screenSnapshot() }, "", location.href);
+  renderApp();
+  return true;
+}
+
+function currentModalIsOpen() {
+  return document.getElementById("modal")?.classList.contains("open");
+}
+
+function closeModalNow() {
+  document.getElementById("modal")?.classList.remove("open");
+}
+
+function seedBrowserState() {
+  if (!history.state?.learnview) {
+    history.replaceState({ learnview: true, screen: screenSnapshot() }, "", location.href);
+  }
+}
+
+window.navigateTo = view => {
+  const next = screenSnapshot();
+  next.view = view;
+  pushScreen(next);
+};
+
+window.navigateBack = () => {
+  if (currentModalIsOpen()) {
+    window.closeModal();
+    return;
+  }
+  if (ui.navigationStack.length) {
+    history.back();
+    return;
+  }
+  if (ui.view !== "dashboard" || ui.sectionAction[ui.view]) {
+    const next = screenSnapshot();
+    next.view = "dashboard";
+    next.sectionAction = {};
+    history.replaceState({ learnview: true, screen: next }, "", location.href);
+    applyScreen(next);
+    renderApp();
+  }
+};
+
+window.setSectionActionWithHistory = (section, action) => {
+  const next = screenSnapshot();
+  next.sectionAction = { ...next.sectionAction, [section]: action };
+  pushScreen(next);
+};
+
 window.loginSubmit = event => {
   event.preventDefault();
   if (login(document.getElementById("password").value.trim())) {
     renderApp();
+    seedBrowserState();
     if (state.settings.apiUrl) loadFromSheets().then(renderApp);
     toast("Signed in");
   } else {
@@ -44,13 +127,11 @@ window.confirmLogout = () => {
 };
 
 window.go = view => {
-  ui.view = view;
-  renderApp();
+  window.navigateTo(view);
 };
 
 window.setSectionAction = (section, action) => {
-  ui.sectionAction[section] = action;
-  renderApp();
+  window.setSectionActionWithHistory(section, action);
 };
 
 window.setFilter = (key, value) => {
@@ -59,19 +140,22 @@ window.setFilter = (key, value) => {
 };
 
 window.selectStudent = id => {
-  ui.selectedStudentId = id;
-  renderApp();
+  const next = screenSnapshot();
+  next.selectedStudentId = id;
+  pushScreen(next);
 };
 
 window.selectInvoice = id => {
-  ui.selectedInvoiceId = id;
-  ui.sectionAction.invoices = "view";
-  renderApp();
+  const next = screenSnapshot();
+  next.selectedInvoiceId = id;
+  next.sectionAction = { ...next.sectionAction, invoices: "view" };
+  pushScreen(next);
 };
 
 window.setScheduleMode = mode => {
-  ui.scheduleMode = mode;
-  renderApp();
+  const next = screenSnapshot();
+  next.scheduleMode = mode;
+  pushScreen(next);
 };
 
 window.dragLesson = (event, id) => {
@@ -114,10 +198,21 @@ window.openModal = (title, body, onSubmit) => {
     </form>
   `;
   document.getElementById("modal").classList.add("open");
+  history.pushState({ learnview: true, modal: true, screen: screenSnapshot() }, "", location.href);
 };
 
-window.closeModal = () => {
-  document.getElementById("modal").classList.remove("open");
+window.closeModal = preserveCurrentState => {
+  if (!preserveCurrentState && history.state?.modal) {
+    history.back();
+    return;
+  }
+  closeModalNow();
+  if (history.state?.modal) {
+    const previousScreen = history.state.screen;
+    const currentScreen = screenSnapshot();
+    if (previousScreen && !sameScreen(previousScreen, currentScreen)) ui.navigationStack.push(previousScreen);
+    history.replaceState({ learnview: true, screen: currentScreen }, "", location.href);
+  }
 };
 
 window.openAiSettings = () => {
@@ -126,13 +221,13 @@ window.openAiSettings = () => {
 
 window.saveAiSettingsForm = event => {
   event.preventDefault();
-  window.closeModal();
+  window.closeModal(true);
   renderApp();
   toast("LearnView AI is connected through Cloudflare Worker");
 };
 
 window.clearAiKeySetting = () => {
-  window.closeModal();
+  window.closeModal(true);
   renderApp();
   toast("No API key is stored inside the app");
 };
@@ -232,7 +327,7 @@ Object.keys(forms).forEach(collection => {
       await syncCollection("invoiceItems", extraSync.existing ? "UPDATE" : "POST", extraSync.record);
     }
 
-    window.closeModal();
+    window.closeModal(true);
     renderApp();
     toast(`${collection} saved`);
   };
@@ -294,7 +389,7 @@ window.savePayment = async event => {
   upsert("payments", record);
   await syncCollection("payments", "POST", record);
 
-  window.closeModal();
+  window.closeModal(true);
   renderApp();
   toast(`Payment recorded. Invoice is ${invoice ? invoiceStatus(invoice) : "updated"}.`);
 };
@@ -333,7 +428,7 @@ window.composeMessage = async (studentId, type) => {
 
 window.closeOnly = event => {
   event.preventDefault();
-  window.closeModal();
+  window.closeModal(true);
 };
 
 window.saveSettings = async () => {
@@ -405,11 +500,41 @@ window.printCurrent = () => {
   setTimeout(() => document.body.classList.remove("print-document"), 300);
 };
 
+window.addEventListener("popstate", event => {
+  if (currentModalIsOpen()) {
+    closeModalNow();
+    if (event.state?.screen) applyScreen(event.state.screen);
+    renderApp();
+    return;
+  }
+
+  if (document.body.classList.contains("print-document")) {
+    document.body.classList.remove("print-document");
+  }
+
+  if (event.state?.learnview && event.state.screen) {
+    if (ui.navigationStack.length) ui.navigationStack.pop();
+    applyScreen(event.state.screen);
+    renderApp();
+    return;
+  }
+
+  if (ui.view !== "dashboard" || ui.sectionAction[ui.view]) {
+    const next = screenSnapshot();
+    next.view = "dashboard";
+    next.sectionAction = {};
+    history.replaceState({ learnview: true, screen: next }, "", location.href);
+    applyScreen(next);
+    renderApp();
+  }
+});
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
 renderApp();
+seedBrowserState();
 
 if (state.settings.apiUrl) {
   loadFromSheets().then(renderApp);

@@ -82,7 +82,7 @@ export function emptyState(text) {
 }
 
 export function actionMenu(section, items) {
-  return `<section class="card module-menu"><div class="section-title"><h3>${section}</h3></div><div class="category-grid">${items.map(item => `<button class="category-card" onclick="${item.onclick || `setSectionAction('${item.section || section.toLowerCase()}','${item.action}')`}">${icon(item.icon)}<span>${item.title}</span><small>${item.description || ""}</small></button>`).join("")}</div></section>`;
+  return `<section class="card module-menu"><div class="section-title"><h3>${section}</h3></div><div class="category-grid">${items.map(item => `<button class="category-card" onclick="${item.onclick || `setSectionActionWithHistory('${item.section || section.toLowerCase()}','${item.action}')`}">${icon(item.icon)}<span>${item.title}</span><small>${item.description || ""}</small></button>`).join("")}</div></section>`;
 }
 
 export function barChart(title, data, suffix = "") {

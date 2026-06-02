@@ -10,7 +10,7 @@ export function assessments() {
     { section: "assessments", action: "quarterly", icon: "calendar-days", title: "Quarterly Results" },
     { section: "assessments", action: "averages", icon: "trending-up", title: "Student Averages" }
   ]);
-  if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Test Mark</h3><button class="btn ghost" onclick="setSectionAction('assessments','')">Back</button></div><button class="btn primary" onclick="openAssessment()">Open mark form</button></section>`;
+  if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Test Mark</h3><button class="btn ghost" onclick="navigateBack()">Back</button></div><button class="btn primary" onclick="openAssessment()">Open mark form</button></section>`;
   const subjectData = Object.fromEntries(state.subjects.map(subject => [subject.name, averageForSubject(subject.id)]));
   return `<section class="card"><div class="section-title"><h3>Assessment history</h3><button class="btn primary" onclick="openAssessment()">Add mark</button></div>${table("", ["Student", "Subject", "Type", "Date", "Score", "Comment", ""], state.assessments.map(row => [studentName(row.studentId), subjectName(row.subjectId), row.type, row.date, `${scorePercent(row)}%`, row.comment, actions("assessments", row.id)]))}</section><section class="card">${barChart("Subject averages", subjectData, "%")}</section>`;
 }
