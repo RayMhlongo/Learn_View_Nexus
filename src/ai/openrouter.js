@@ -1,7 +1,6 @@
 import { buildRelevantContext, SYSTEM_PROMPT } from "./context.js";
-import { safeGet, safeRemove, safeSet } from "../utils.js";
 
-const WORKER_URL_STORAGE = "learnview-cloudflare-worker-url";
+const WORKER_URL = "https://learnview.rodgersmhlongo.workers.dev";
 
 const FREE_MODELS = [
   "openrouter/free",
@@ -13,31 +12,23 @@ const FREE_MODELS = [
 ];
 
 export function getAiSettings() {
-  const workerUrl = safeGet(localStorage, WORKER_URL_STORAGE) || "";
-
   return {
-    hasWorkerUrl: Boolean(workerUrl),
-    workerUrl,
+    hasWorker: true,
+    workerUrl: WORKER_URL,
     model: "Auto free model"
   };
 }
 
-export function saveAiSettings(workerUrl) {
-  const trimmedUrl = workerUrl.trim();
-
-  if (!trimmedUrl) {
-    throw new Error("Add your Cloudflare Worker URL before saving AI settings.");
-  }
-
-  safeSet(localStorage, WORKER_URL_STORAGE, trimmedUrl);
+export function saveAiSettings() {
+  return true;
 }
 
 export function clearAiKey() {
-  safeRemove(localStorage, WORKER_URL_STORAGE);
+  return true;
 }
 
-async function callWorker(workerUrl, messages, model) {
-  const response = await fetch(workerUrl, {
+async function callWorker(messages, model) {
+  const response = await fetch(WORKER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -70,16 +61,10 @@ async function callWorker(workerUrl, messages, model) {
 }
 
 export async function askLearnViewAi(question) {
-  const workerUrl = safeGet(localStorage, WORKER_URL_STORAGE);
-
-  if (!workerUrl) {
-    throw new Error("Add your Cloudflare Worker URL in AI Settings before sending a question.");
-  }
-
   const context = buildRelevantContext(question);
 
   if (!context.hasData) {
-    throw new Error("No relevant LearnView Nexus data is available for that question.");
+    throw new Error("No relevant LearnView data is available for that question.");
   }
 
   const messages = [
@@ -88,7 +73,7 @@ export async function askLearnViewAi(question) {
       role: "user",
       content: [
         `Tutor question: ${question}`,
-        "Use only the structured LearnView Nexus data below. If the answer cannot be found in this data, say what is unavailable.",
+        "Use only the structured LearnView data below. If the answer cannot be found in this data, say what is unavailable.",
         JSON.stringify(context, null, 2)
       ].join("\n\n")
     }
@@ -98,7 +83,7 @@ export async function askLearnViewAi(question) {
 
   for (const model of FREE_MODELS) {
     try {
-      const data = await callWorker(workerUrl, messages, model);
+      const data = await callWorker(messages, model);
       const answer = data.choices?.[0]?.message?.content?.trim();
 
       if (answer) {
