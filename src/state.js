@@ -29,9 +29,9 @@ export const seed = {
     { id: "SUB-0004", name: "English", description: "Comprehension, essays and literature", gradeRange: "8-12", price: 260, status: "Active" }
   ],
   students: [
-    { id: "STU-0001", name: "Amahle Dlamini", grade: "Grade 11", guardian: "Nokuthula Dlamini", parentPhone: "+27 82 111 8899", parentEmail: "nokuthula@example.com", studentPhone: "+27 71 442 9001", address: "Soweto", subjectIds: ["SUB-0001", "SUB-0002"], startDate: "2026-01-15", frequency: 2, days: "Tuesday, Thursday", time: "16:00", paymentType: "Monthly", status: "Active", photo: "", availabilityNotes: "Prefers late afternoons.", notes: "Strong algebra; needs mechanics practice." },
-    { id: "STU-0002", name: "Liam Jacobs", grade: "Grade 10", guardian: "Karen Jacobs", parentPhone: "+27 83 222 7766", parentEmail: "karen@example.com", studentPhone: "+27 72 450 1122", address: "Randburg", subjectIds: ["SUB-0003", "SUB-0004"], startDate: "2026-02-01", frequency: 1, days: "Saturday", time: "09:00", paymentType: "Per lesson", status: "Active", photo: "", availabilityNotes: "Saturday mornings only.", notes: "Prefers concise homework packs." },
-    { id: "STU-0003", name: "Thabo Mokoena", grade: "Grade 12", guardian: "Mpho Mokoena", parentPhone: "+27 84 333 6677", parentEmail: "mpho@example.com", studentPhone: "+27 76 118 2277", address: "Midrand", subjectIds: ["SUB-0001"], startDate: "2026-01-22", frequency: 2, days: "Monday, Wednesday", time: "17:30", paymentType: "Monthly", status: "Active", photo: "", availabilityNotes: "Avoid Friday evenings.", notes: "Exam sprint plan. Monitor calculus confidence." }
+    { id: "STU-0001", name: "Amahle Dlamini", grade: "Grade 11", guardian: "Nokuthula Dlamini", parentPhone: "+27 82 111 8899", parentEmail: "nokuthula@example.com", studentPhone: "+27 71 442 9001", province: "Gauteng", city: "Soweto", suburb: "", subjectIds: ["SUB-0001", "SUB-0002"], startDate: "2026-01-15", frequency: 2, days: "Tuesday, Thursday", time: "16:00", paymentType: "Monthly", status: "Active", availabilityNotes: "Prefers late afternoons.", notes: "Strong algebra; needs mechanics practice." },
+    { id: "STU-0002", name: "Liam Jacobs", grade: "Grade 10", guardian: "Karen Jacobs", parentPhone: "+27 83 222 7766", parentEmail: "karen@example.com", studentPhone: "+27 72 450 1122", province: "Gauteng", city: "Randburg", suburb: "", subjectIds: ["SUB-0003", "SUB-0004"], startDate: "2026-02-01", frequency: 1, days: "Saturday", time: "09:00", paymentType: "Per lesson", status: "Active", availabilityNotes: "Saturday mornings only.", notes: "Prefers concise homework packs." },
+    { id: "STU-0003", name: "Thabo Mokoena", grade: "Grade 12", guardian: "Mpho Mokoena", parentPhone: "+27 84 333 6677", parentEmail: "mpho@example.com", studentPhone: "+27 76 118 2277", province: "Gauteng", city: "Midrand", suburb: "", subjectIds: ["SUB-0001"], startDate: "2026-01-22", frequency: 2, days: "Monday, Wednesday", time: "17:30", paymentType: "Monthly", status: "Active", availabilityNotes: "Avoid Friday evenings.", notes: "Exam sprint plan. Monitor calculus confidence." }
   ],
   schedule: [
     { id: "SCH-0001", studentId: "STU-0001", subjectId: "SUB-0001", day: "Tuesday", date: "2026-06-02", start: "16:00", end: "17:30", recurring: true, status: "Scheduled", type: "Individual", location: "Online", notes: "Functions" },
@@ -104,7 +104,7 @@ export function loadState() {
 
 export function normalize(data) {
   const merged = { ...clone(seed), ...data, settings: { ...seed.settings, ...(data.settings || {}) }, meta: { ...seed.meta, ...(data.meta || {}) } };
-  merged.students = merged.students.map(student => ({ ...student, subjectIds: student.subjectIds || subjectIdsFromNames(student.subjects || []) }));
+  merged.students = merged.students.map(student => ({ ...student, subjectIds: student.subjectIds || subjectIdsFromNames(student.subjects || []), province: student.province || "Gauteng", city: student.city || student.address || "", suburb: student.suburb || "" }));
   merged.schedule = merged.schedule.map(row => ({ ...row, studentId: row.studentId || studentIdFromName(row.student), subjectId: row.subjectId || subjectIdFromName(row.subject), status: row.status || "Scheduled", recurring: row.recurring ?? true }));
   merged.attendance = merged.attendance.map(row => ({ ...row, studentId: row.studentId || studentIdFromName(row.student), subjectId: row.subjectId || subjectIdFromName(row.subject) }));
   merged.assessments = merged.assessments.map(row => ({ ...row, studentId: row.studentId || studentIdFromName(row.student), subjectId: row.subjectId || subjectIdFromName(row.subject) }));
@@ -211,11 +211,15 @@ export function performanceAverage(studentId, subjectIds, startDate, endDate) {
 }
 
 export function hasScheduleConflict(lesson) {
-  return state.schedule.some(row => row.id !== lesson.id
-    && row.status !== "Cancelled"
-    && lesson.status !== "Cancelled"
-    && ((row.date && lesson.date && row.date === lesson.date) || row.day === lesson.day)
-    && timeOverlaps(row.start, row.end, lesson.start, lesson.end));
+  return state.schedule.some(row => {
+    const sameDate = row.date && lesson.date && row.date === lesson.date;
+    const recurringSameDay = row.day === lesson.day && (row.recurring === true || row.recurring === "true" || lesson.recurring === true || lesson.recurring === "true");
+    return row.id !== lesson.id
+      && row.status !== "Cancelled"
+      && lesson.status !== "Cancelled"
+      && (sameDate || recurringSameDay)
+      && timeOverlaps(row.start, row.end, lesson.start, lesson.end);
+  });
 }
 
 export function upsert(collection, record) {

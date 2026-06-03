@@ -112,31 +112,6 @@ export function timeOverlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
-export function qrElement(text, id) {
-  return `<div class="qr-real" id="${id}" data-qr="${encodeURIComponent(text)}" aria-label="QR code"></div>`;
-}
-
-export function renderQRCodes() {
-  document.querySelectorAll(".qr-real").forEach(element => {
-    if (element.dataset.rendered) return;
-    const text = decodeURIComponent(element.dataset.qr || "");
-    element.textContent = "";
-    if (window.QRCode?.toCanvas) {
-      const canvas = document.createElement("canvas");
-      window.QRCode.toCanvas(canvas, text, { width: 112, margin: 1 }, error => {
-        if (!error) {
-          element.appendChild(canvas);
-          element.dataset.rendered = "true";
-        }
-      });
-    } else {
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodeURIComponent(text)}`;
-      element.innerHTML = `<img src="${url}" alt="QR code">`;
-      element.dataset.rendered = "true";
-    }
-  });
-}
-
 export function formData(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   form.querySelectorAll("select[multiple]").forEach(select => {

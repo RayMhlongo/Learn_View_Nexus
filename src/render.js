@@ -1,4 +1,4 @@
-import { renderQRCodes, refreshIcons } from "./utils.js";
+import { refreshIcons } from "./utils.js";
 import { isAuthenticated, state, ui } from "./state.js";
 import { analytics } from "./components/analytics.js";
 import { ai } from "./components/ai.js";
@@ -21,7 +21,6 @@ export function renderApp() {
   const app = document.getElementById("app");
   app.innerHTML = isAuthenticated() ? shell() : loginScreen();
   refreshIcons();
-  renderQRCodes();
 }
 
 function loginScreen() {

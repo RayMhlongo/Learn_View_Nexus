@@ -1,4 +1,4 @@
-const CACHE_NAME = "learnview-nexus-v3";
+const CACHE_NAME = "learnview-nexus-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const ASSETS = [
   "./src/api.js",
   "./src/render.js",
   "./src/utils.js",
+  "./src/data/southAfricaLocations.js",
   "./src/components/navigation.js",
   "./src/components/ai.js",
   "./src/components/dashboard.js",

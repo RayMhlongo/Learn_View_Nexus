@@ -3,7 +3,7 @@ const API_VERSION = "2026-06-02";
 const SCHEMA = {
   Settings: ["ID", "businessName", "tagline", "tutorName", "phone", "email", "address", "banking", "rate", "prefix", "terms", "availability", "apiUrl", "adminPassword", "setupComplete", "CreatedAt", "UpdatedAt"],
   Subjects: ["id", "name", "description", "gradeRange", "price", "status", "CreatedAt", "UpdatedAt"],
-  Students: ["id", "name", "grade", "guardian", "parentPhone", "parentEmail", "studentPhone", "address", "subjectIds", "startDate", "frequency", "days", "time", "paymentType", "status", "photo", "availabilityNotes", "notes", "CreatedAt", "UpdatedAt"],
+  Students: ["id", "name", "grade", "guardian", "parentPhone", "parentEmail", "studentPhone", "province", "city", "suburb", "subjectIds", "startDate", "frequency", "days", "time", "paymentType", "status", "availabilityNotes", "notes", "CreatedAt", "UpdatedAt"],
   Schedule: ["id", "studentId", "subjectId", "day", "date", "start", "end", "recurring", "status", "type", "location", "notes", "CreatedAt", "UpdatedAt"],
   Attendance: ["id", "studentId", "subjectId", "scheduleId", "date", "status", "notes", "CreatedAt", "UpdatedAt"],
   Assessments: ["id", "studentId", "subjectId", "type", "name", "date", "term", "mark", "total", "comment", "CreatedAt", "UpdatedAt"],

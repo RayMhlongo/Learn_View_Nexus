@@ -11,6 +11,7 @@ import { attendanceForm } from "./components/attendance.js";
 import { assessmentForm } from "./components/assessments.js";
 import { invoiceForm, paymentForm } from "./components/invoices.js";
 import { reportForm } from "./components/reports.js";
+import { citiesForProvince } from "./data/southAfricaLocations.js";
 
 const forms = {
   students: studentForm,
@@ -139,6 +140,52 @@ window.setFilter = (key, value) => {
   renderApp();
 };
 
+window.refreshStudentCities = province => {
+  const select = document.getElementById("student-city");
+  if (!select) return;
+  select.innerHTML = citiesForProvince(province).map(city => `<option value="${city}">${city}</option>`).join("");
+};
+
+window.subjectOptionsForStudent = studentId => {
+  const student = state.students.find(row => row.id === studentId);
+  const preferred = student?.subjectIds?.length ? student.subjectIds : state.subjects.map(subject => subject.id);
+  return preferred.map(id => state.subjects.find(subject => subject.id === id)).filter(Boolean);
+};
+
+window.refreshStudentSubjectOptions = (studentId, targetId = "subjectId") => {
+  const select = document.getElementById(targetId);
+  if (!select) return;
+  const current = select.value;
+  const subjects = window.subjectOptionsForStudent(studentId);
+  select.innerHTML = subjects.map(subject => `<option value="${subject.id}" ${current === subject.id ? "selected" : ""}>${subject.name}</option>`).join("");
+};
+
+window.refreshInvoiceStudentDetails = studentId => {
+  const student = state.students.find(row => row.id === studentId);
+  if (!student) return;
+  const setValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (element) element.value = value || "";
+  };
+  setValue("invoice-guardian", student.guardian);
+  setValue("invoice-parent-phone", student.parentPhone);
+  setValue("invoice-parent-email", student.parentEmail);
+  setValue("invoice-grade", student.grade);
+  setValue("invoice-student-id", student.id);
+  setValue("invoice-location", [student.suburb, student.city, student.province].filter(Boolean).join(", "));
+  window.refreshStudentSubjectOptions(studentId, "invoice-subject");
+};
+
+window.refreshScheduleStudentDetails = studentId => {
+  const student = state.students.find(row => row.id === studentId);
+  if (!student) return;
+  const panel = document.getElementById("schedule-student-summary");
+  if (panel) {
+    panel.innerHTML = `<strong>Student preferences</strong><br>Subjects: ${(student.subjectIds || []).map(id => state.subjects.find(subject => subject.id === id)?.name).filter(Boolean).join(", ") || "None selected"}<br>Preferred days: ${student.days || "Not specified"}<br>Preferred time: ${student.time || "Not specified"}<br>Lessons/week: ${student.frequency || "Not specified"}<br>Availability: ${student.availabilityNotes || "Not specified"}`;
+  }
+  window.refreshStudentSubjectOptions(studentId, "subjectId");
+};
+
 window.selectStudent = id => {
   const next = screenSnapshot();
   next.selectedStudentId = id;
@@ -167,6 +214,7 @@ window.dropLesson = async (event, day) => {
   const lesson = state.schedule.find(row => row.id === id);
   if (!lesson) return;
 
+  const previous = { ...lesson };
   lesson.day = day;
 
   const date = new Date(lesson.date || Date.now());
@@ -176,6 +224,13 @@ window.dropLesson = async (event, day) => {
     const current = (date.getDay() + 6) % 7;
     date.setDate(date.getDate() + (target - current));
     lesson.date = date.toISOString().slice(0, 10);
+  }
+
+  if (hasScheduleConflict(lesson)) {
+    Object.assign(lesson, previous);
+    renderApp();
+    toast("This time slot is already booked. Please choose another time.");
+    return;
   }
 
   saveState();
@@ -314,6 +369,11 @@ Object.keys(forms).forEach(collection => {
     };
 
     let extraSync = null;
+
+    if (collection === "schedule" && hasScheduleConflict(record)) {
+      toast("This time slot is already booked. Please choose another time.");
+      return;
+    }
 
     if (collection === "invoices") {
       extraSync = saveInvoiceWithItem(record, data);
