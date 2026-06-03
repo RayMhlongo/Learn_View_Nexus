@@ -2,7 +2,7 @@ import { bulkSync, loadFromSheets, syncCollection, testConnection } from "./api.
 import { formData, safeSet, toast, uid } from "./utils.js";
 import { hasScheduleConflict, invoiceStatus, logout, login, prefixFor, removeRecord, saveState, state, ui, upsert } from "./state.js";
 import { renderApp } from "./render.js";
-import { askLearnViewAi } from "./ai/openrouter.js";
+import { askLearnViewAi } from "./ai/service.js";
 import { aiSettingsForm } from "./components/ai.js";
 import { studentForm } from "./components/students.js";
 import { subjectForm } from "./components/subjects.js";
@@ -34,6 +34,7 @@ function screenSnapshot() {
     selectedInvoiceId: ui.selectedInvoiceId,
     selectedReportId: ui.selectedReportId,
     scheduleMode: ui.scheduleMode,
+    printPreview: ui.printPreview ? { ...ui.printPreview } : null,
     filters: { ...ui.filters }
   };
 }
@@ -50,6 +51,7 @@ function applyScreen(screen) {
   ui.selectedInvoiceId = screen.selectedInvoiceId || ui.selectedInvoiceId;
   ui.selectedReportId = screen.selectedReportId || ui.selectedReportId;
   ui.scheduleMode = screen.scheduleMode || "week";
+  ui.printPreview = screen.printPreview || null;
   ui.filters = { ...(screen.filters || {}) };
 }
 
@@ -92,6 +94,14 @@ window.navigateBack = () => {
     history.back();
     return;
   }
+  if (ui.printPreview) {
+    const next = screenSnapshot();
+    next.printPreview = null;
+    history.replaceState({ learnview: true, screen: next }, "", location.href);
+    applyScreen(next);
+    renderApp();
+    return;
+  }
   if (ui.view !== "dashboard" || ui.sectionAction[ui.view]) {
     const next = screenSnapshot();
     next.view = "dashboard";
@@ -104,7 +114,14 @@ window.navigateBack = () => {
 
 window.setSectionActionWithHistory = (section, action) => {
   const next = screenSnapshot();
+  next.printPreview = null;
   next.sectionAction = { ...next.sectionAction, [section]: action };
+  pushScreen(next);
+};
+
+window.openPrintPreview = (type, id = "") => {
+  const next = screenSnapshot();
+  next.printPreview = { type, id };
   pushScreen(next);
 };
 
@@ -278,7 +295,7 @@ window.saveAiSettingsForm = event => {
   event.preventDefault();
   window.closeModal(true);
   renderApp();
-  toast("LearnView AI is connected through Cloudflare Worker");
+  toast("LearnView AI settings saved");
 };
 
 window.clearAiKeySetting = () => {
@@ -339,26 +356,26 @@ window.refreshAiData = async () => {
   toast(result.ok ? "AI data source refreshed" : result.error || "Could not refresh data");
 };
 
-window.openStudent = () => openCrud("students");
-window.openSubject = () => openCrud("subjects");
-window.openSchedule = () => openCrud("schedule");
-window.openAttendance = () => openCrud("attendance");
-window.openAssessment = () => openCrud("assessments");
-window.openInvoice = () => openCrud("invoices");
-window.openReport = () => openCrud("reportCards");
+window.openStudent = () => openRecordEditor("students");
+window.openSubject = () => openRecordEditor("subjects");
+window.openSchedule = () => openRecordEditor("schedule");
+window.openAttendance = () => openRecordEditor("attendance");
+window.openAssessment = () => openRecordEditor("assessments");
+window.openInvoice = () => openRecordEditor("invoices");
+window.openReport = () => openRecordEditor("reportCards");
 
-function openCrud(collection, id) {
+function openRecordEditor(collection, id) {
   const record = id ? state[collection].find(item => item.id === id) : {};
 
   window.openModal(
     `${id ? "Edit" : "New"} ${collection}`,
     `<input type="hidden" name="id" value="${id || ""}">${forms[collection](record || {})}`,
-    `saveCrud_${collection}`
+    `saveRecord_${collection}`
   );
 }
 
 Object.keys(forms).forEach(collection => {
-  window[`saveCrud_${collection}`] = async event => {
+  window[`saveRecord_${collection}`] = async event => {
     event.preventDefault();
 
     const data = formData(event.target);
@@ -418,7 +435,7 @@ function saveInvoiceWithItem(invoice, data) {
   };
 }
 
-window.editRecord = (collection, id) => openCrud(collection, id);
+window.editRecord = (collection, id) => openRecordEditor(collection, id);
 
 window.deleteRecord = async (collection, id) => {
   if (!confirm("Delete or deactivate this record?")) return;
@@ -560,6 +577,31 @@ window.printCurrent = () => {
   setTimeout(() => document.body.classList.remove("print-document"), 300);
 };
 
+window.downloadCurrentPdf = async () => {
+  const doc = document.querySelector(".print-preview .print-doc") || document.querySelector(".only-printable.print-doc");
+  if (!doc || !window.html2pdf) {
+    toast("PDF download failed. Please use Print and Save as PDF.");
+    return;
+  }
+
+  const preview = ui.printPreview || {};
+  const orientation = preview.type === "schedule" ? "landscape" : "portrait";
+  const filename = window.currentPdfFilename?.() || "LearnView_Document.pdf";
+
+  try {
+    await window.html2pdf().set({
+      margin: 6,
+      filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+    }).from(doc).save();
+  } catch {
+    toast("PDF download failed. Please use Print and Save as PDF.");
+  }
+};
+
 window.addEventListener("popstate", event => {
   if (currentModalIsOpen()) {
     closeModalNow();
@@ -592,6 +634,13 @@ window.addEventListener("popstate", event => {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
+
+try {
+  const statusBar = window.Capacitor?.Plugins?.StatusBar;
+  statusBar?.setOverlaysWebView?.({ overlay: false });
+  statusBar?.setStyle?.({ style: "DARK" });
+  statusBar?.setBackgroundColor?.({ color: "#ffffff" });
+} catch {}
 
 renderApp();
 seedBrowserState();

@@ -34,3 +34,11 @@ fs.mkdirSync(outDir, { recursive: true });
 for (const entry of entries) {
   copyRecursive(path.join(root, entry), path.join(outDir, entry));
 }
+
+const vendorDir = path.join(root, "assets", "vendor");
+fs.mkdirSync(vendorDir, { recursive: true });
+fs.copyFileSync(
+  path.join(root, "node_modules", "html2pdf.js", "dist", "html2pdf.bundle.min.js"),
+  path.join(vendorDir, "html2pdf.bundle.min.js")
+);
+copyRecursive(path.join(vendorDir, "html2pdf.bundle.min.js"), path.join(outDir, "assets", "vendor", "html2pdf.bundle.min.js"));

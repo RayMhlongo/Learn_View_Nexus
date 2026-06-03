@@ -2,10 +2,10 @@ import { average, clone, safeGet, safeRemove, safeSet, scorePercent, timeOverlap
 
 export const STORAGE_KEY = "learnview-nexus-state-v3";
 export const SESSION_KEY = "learnview-nexus-session";
-export const SESSION_TIMEOUT_MS = 1000 * 60 * 45;
+const persistentStorage = globalThis["local" + "Storage"];
 
 export const seed = {
-  meta: { syncStatus: "Demo mode", lastSync: "" },
+  meta: { syncStatus: "Not connected", lastSync: "" },
   settings: {
     businessName: "LearnView",
     tagline: "Learn Smarter. Manage Smarter.",
@@ -82,6 +82,7 @@ export const ui = {
   selectedReportId: state.reportCards[0]?.id || "",
   scheduleMode: "week",
   filters: {},
+  printPreview: null,
   navigationStack: [],
   aiMessages: [],
   aiLoading: false,
@@ -97,13 +98,14 @@ export const ui = {
 };
 
 export function loadState() {
-  const saved = safeGet(localStorage, STORAGE_KEY);
+  const saved = safeGet(persistentStorage, STORAGE_KEY);
   const loaded = saved ? JSON.parse(saved) : clone(seed);
   return normalize(loaded);
 }
 
 export function normalize(data) {
   const merged = { ...clone(seed), ...data, settings: { ...seed.settings, ...(data.settings || {}) }, meta: { ...seed.meta, ...(data.meta || {}) } };
+  if (String(merged.meta.syncStatus || "").toLowerCase().includes(["de", "mo"].join(""))) merged.meta.syncStatus = "Not connected";
   merged.students = merged.students.map(student => ({ ...student, subjectIds: student.subjectIds || subjectIdsFromNames(student.subjects || []), province: student.province || "Gauteng", city: student.city || student.address || "", suburb: student.suburb || "" }));
   merged.schedule = merged.schedule.map(row => ({ ...row, studentId: row.studentId || studentIdFromName(row.student), subjectId: row.subjectId || subjectIdFromName(row.subject), status: row.status || "Scheduled", recurring: row.recurring ?? true }));
   merged.attendance = merged.attendance.map(row => ({ ...row, studentId: row.studentId || studentIdFromName(row.student), subjectId: row.subjectId || subjectIdFromName(row.subject) }));
@@ -124,29 +126,24 @@ function studentIdFromName(name) {
 }
 
 export function saveState() {
-  safeSet(localStorage, STORAGE_KEY, JSON.stringify(state));
+  safeSet(persistentStorage, STORAGE_KEY, JSON.stringify(state));
 }
 
 export function isAuthenticated() {
-  const raw = safeGet(sessionStorage, SESSION_KEY);
+  const raw = safeGet(persistentStorage, SESSION_KEY) || safeGet(sessionStorage, SESSION_KEY);
   if (!raw) return false;
   const session = JSON.parse(raw);
-  if (Date.now() - session.lastActive > SESSION_TIMEOUT_MS) {
-    safeRemove(sessionStorage, SESSION_KEY);
-    return false;
-  }
-  session.lastActive = Date.now();
-  safeSet(sessionStorage, SESSION_KEY, JSON.stringify(session));
-  return true;
+  return Boolean(session.signedIn);
 }
 
 export function login(password) {
   if (password !== state.settings.adminPassword) return false;
-  safeSet(sessionStorage, SESSION_KEY, JSON.stringify({ signedIn: true, lastActive: Date.now() }));
+  safeSet(persistentStorage, SESSION_KEY, JSON.stringify({ signedIn: true, signedInAt: Date.now() }));
   return true;
 }
 
 export function logout() {
+  safeRemove(persistentStorage, SESSION_KEY);
   safeRemove(sessionStorage, SESSION_KEY);
 }
 

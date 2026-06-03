@@ -1,4 +1,4 @@
-const CACHE_NAME = "learnview-nexus-v5";
+const CACHE_NAME = "learnview-nexus-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const ASSETS = [
   "./assets/icons/learnview-icon-512.png",
   "./assets/icons/learnview-icon-maskable-512.png",
   "./assets/icons/learnview-splash.png",
+  "./assets/vendor/html2pdf.bundle.min.js",
   "./src/main.js",
   "./src/state.js",
   "./src/api.js",
@@ -20,6 +21,7 @@ const ASSETS = [
   "./src/utils.js",
   "./src/data/southAfricaLocations.js",
   "./src/components/navigation.js",
+  "./src/components/printPreview.js",
   "./src/components/ai.js",
   "./src/components/dashboard.js",
   "./src/components/students.js",
@@ -36,7 +38,7 @@ const ASSETS = [
   "./src/print/reportCard.js",
   "./src/print/schedule.js",
   "./src/ai/context.js",
-  "./src/ai/openrouter.js"
+  "./src/ai/service.js"
 ];
 
 self.addEventListener("install", event => {

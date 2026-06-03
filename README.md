@@ -6,11 +6,11 @@ Tagline: **Learn Smarter. Manage Smarter.**
 
 ## What is included
 
-- Commercial SaaS-style dashboard with login, KPIs, quick actions and demo data.
+- SaaS-style dashboard with login, KPIs, quick actions and starter records.
 - Official LearnView logo asset in `assets/learnview-logo.jpeg`, used across app and print documents.
 - Modular frontend under `src/` with separated state, API, rendering, components and print templates.
-- Configurable Google Apps Script URL from the Setup screen, with connection test, bulk load and bulk sync controls.
-- Sync status indicators for demo, connected, syncing and failed states.
+- Configurable data connection URL from the Setup screen, with connection test, load and sync controls.
+- Sync status indicators for connected, syncing, unavailable and failed states.
 - ID-based relationships for students, subjects, schedules, attendance, assessments, invoices, invoice items, payments, reports and messages.
 - Dedicated student profile workflow with parent details, subjects, attendance, assessments, invoices, payments, trends, notes and report history.
 - Advanced schedule views for weekly calendar, monthly calendar and daily agenda, with conflict warnings and drag/drop lesson movement.
@@ -18,21 +18,21 @@ Tagline: **Learn Smarter. Manage Smarter.**
 - Parent communication tools for WhatsApp-ready invoice, attendance and performance messages.
 - BI dashboard for revenue, growth, attendance, subject, student and assessment analytics.
 - Premium printable invoice, report card and weekly schedule layouts with 6% logo watermark and QR-style verification block.
-- PWA manifest and service worker for APK readiness and basic caching.
-- Central Google Apps Script API hook in `app.js`.
+- PWA manifest and service worker for installation and basic caching.
+- Central data API hook in `src/api.js`.
 - Google Apps Script backend in `apps-script/Code.gs`.
 - GitHub Pages-ready static files.
 - Capacitor preparation notes in `CAPACITOR.md`.
 
 ## Local use
 
-Open `index.html` in a browser. The demo admin password is:
+Open `index.html` in a browser. The starter admin password is:
 
 ```text
 learnview-admin
 ```
 
-The app runs in demo mode until a Google Apps Script web app URL is saved in **Setup > Apps Script web app URL**.
+The app works offline with local records until a data connection URL is saved in **Setup > Connection URL**.
 
 ## Google Sheets setup
 
@@ -42,7 +42,7 @@ The app runs in demo mode until a Google Apps Script web app URL is saved in **S
 4. Save and run `setupSheets` once, or use the connection test after deployment. The script creates and repairs these sheets:
    `Settings`, `Subjects`, `Students`, `Schedule`, `Attendance`, `Assessments`, `Invoices`, `InvoiceItems`, `Payments`, `ReportCards`, `Messages`.
 5. Deploy as a web app with access set to the tutor account or anyone with the link, depending on your deployment needs.
-6. Open LearnView Nexus, go to **Google Sheets Setup**, paste the deployment URL, and click **Test connection**.
+6. Open LearnView Nexus, go to **Connection Setup**, paste the deployment URL, and click **Test connection**.
 7. Use **Sync now** to push current data or **Load from Sheets** to pull existing data.
 
 ## GitHub Pages deployment
@@ -54,4 +54,4 @@ The app runs in demo mode until a Google Apps Script web app URL is saved in **S
 
 ## Notes
 
-The app is still static and GitHub Pages-ready, but the UI has been structured so it can later be split into components during a React or Capacitor build pass.
+The app is static and GitHub Pages-ready, with Capacitor Android support included for APK builds.

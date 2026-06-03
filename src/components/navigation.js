@@ -15,14 +15,14 @@ export const views = {
   communications: { title: "Parent Communication", icon: "message-circle" },
   subjects: { title: "Subjects", icon: "book-open" },
   settings: { title: "Settings", icon: "settings" },
-  setup: { title: "Google Sheets Setup", icon: "database" }
+  setup: { title: "Connection Setup", icon: "database" }
 };
 
 export function sidebar() {
-  return `<aside class="sidebar"><div class="brand">${logo("logo-main")}</div><nav class="nav">${Object.entries(views).map(([key, meta]) => `<button class="${ui.view === key ? "active" : ""}" onclick="go('${key}')">${icon(meta.icon)}<span>${meta.title}</span></button>`).join("")}</nav><div class="sidebar-card"><strong>${state.meta.syncStatus}</strong><p>${state.settings.apiUrl ? "Google Sheets sync is configured." : "Demo mode. Connect Apps Script in Setup."}</p></div></aside>`;
+  return `<aside class="sidebar"><div class="brand">${logo("logo-main")}</div><nav class="nav">${Object.entries(views).map(([key, meta]) => `<button class="${ui.view === key ? "active" : ""}" onclick="go('${key}')">${icon(meta.icon)}<span>${meta.title}</span></button>`).join("")}</nav><div class="sidebar-card"><strong>${state.settings.apiUrl ? "Connected" : "Not connected"}</strong><p>${state.settings.apiUrl ? "Your data connection is ready." : "Connect your data source in Setup."}</p></div></aside>`;
 }
 
 export function topbar() {
   const view = views[ui.view];
-  return `<header class="topbar"><div><div class="mobile-brand">${logo("logo-mini")}<strong>LearnView</strong></div><h2>${view.title}</h2><p>${state.settings.businessName} - ${state.settings.tagline} - ${state.meta.syncStatus}</p></div><div class="actions"><button class="btn ghost back-btn" onclick="navigateBack()">${icon("arrow-left")} Back</button><button class="btn ghost" onclick="printCurrent()">${icon("printer")} Print</button><button class="btn" onclick="confirmLogout()">${icon("log-out")} Exit</button></div></header>`;
+  return `<header class="topbar"><div><div class="mobile-brand">${logo("logo-mini")}<strong>LearnView</strong></div><h2>${view.title}</h2><p>${state.settings.businessName} - ${state.settings.tagline}</p></div><div class="actions"><button class="btn ghost back-btn" onclick="navigateBack()">${icon("arrow-left")} Back</button><button class="btn" onclick="confirmLogout()">${icon("log-out")} Exit</button></div></header>`;
 }

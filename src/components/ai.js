@@ -1,4 +1,4 @@
-import { getAiSettings } from "../ai/openrouter.js";
+import { getAiSettings } from "../ai/service.js";
 import { state, ui } from "../state.js";
 import { icon } from "../utils.js";
 
@@ -6,9 +6,9 @@ export function ai() {
   const settings = getAiSettings();
   const messages = ui.aiMessages || [];
   const loading = ui.aiLoading;
-  const status = settings.hasWorker
+  const status = settings.hasService
     ? `${state.meta.syncStatus} data ready`
-    : "AI Worker not connected";
+    : "AI connection unavailable";
 
   return `<section class="card ai-shell">
     <div class="section-title">
@@ -41,9 +41,9 @@ export function aiSettingsForm() {
   const settings = getAiSettings();
 
   return `<div class="empty">
-    <strong>LearnView AI is connected through Cloudflare Worker.</strong>
-    <p>OpenRouter API key is not stored in GitHub or inside the app.</p>
-    <p>Worker: ${escapeHtml(settings.workerUrl)}</p>
+    <strong>LearnView AI is connected.</strong>
+    <p>No private AI key is shown in the app interface.</p>
+    <p>Connection: ${escapeHtml(settings.serviceUrl)}</p>
     <p>Model: ${escapeHtml(settings.model)}</p>
   </div>`;
 }

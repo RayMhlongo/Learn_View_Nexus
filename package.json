@@ -24,6 +24,8 @@
   "dependencies": {
     "@capacitor/android": "^8.4.0",
     "@capacitor/cli": "^8.4.0",
-    "@capacitor/core": "^8.4.0"
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/status-bar": "^8.0.2",
+    "html2pdf.js": "^0.14.0"
   }
 }

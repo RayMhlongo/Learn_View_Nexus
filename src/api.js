@@ -20,9 +20,9 @@ export function isConnected() {
 
 export async function request(action, sheet, payload = {}) {
   if (!state.settings.apiUrl) {
-    state.meta.syncStatus = "Demo mode";
+    state.meta.syncStatus = "Not connected";
     saveState();
-    return { ok: true, demo: true };
+    return { ok: true, offline: true };
   }
   state.meta.syncStatus = "Syncing";
   saveState();
@@ -61,14 +61,14 @@ export async function syncCollection(collection, action, record) {
 }
 
 export async function loadFromSheets() {
-  if (!isConnected()) return { ok: true, demo: true };
+  if (!isConnected()) return { ok: true, offline: true };
   const result = await request("BULK_READ", "All", {});
   if (result.ok && result.data) replaceAll(fromSheets(result.data));
   return result;
 }
 
 export async function bulkSync() {
-  if (!isConnected()) return { ok: true, demo: true };
+  if (!isConnected()) return { ok: true, offline: true };
   return request("BULK_SYNC", "All", toSheets(state));
 }
 

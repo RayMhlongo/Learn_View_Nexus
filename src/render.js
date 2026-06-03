@@ -14,17 +14,18 @@ import { settings, setup } from "./components/settings.js";
 import { students } from "./components/students.js";
 import { subjects } from "./components/subjects.js";
 import { icon, logo } from "./utils.js";
+import { printPreview } from "./components/printPreview.js";
 
 const routes = { dashboard, students, schedule, invoices, more, ai, attendance, assessments, reports, analytics, communications, subjects, settings, setup };
 
 export function renderApp() {
   const app = document.getElementById("app");
-  app.innerHTML = isAuthenticated() ? shell() : loginScreen();
+  app.innerHTML = isAuthenticated() ? (ui.printPreview ? printPreview() : shell()) : loginScreen();
   refreshIcons();
 }
 
 function loginScreen() {
-  return `<section class="login"><div class="login-hero"><div>${logo()}<p class="eyebrow">LearnView Nexus</p></div><div><h1>Client-ready tutoring operations.</h1><p class="login-copy">Google Sheets sync, modular workflows, commercial print templates and APK-ready PWA foundations.</p></div><p><strong>${state.settings.tagline}</strong></p></div><form class="login-card" onsubmit="loginSubmit(event)">${logo()}<h2>Welcome back</h2><p class="muted">Sign in to manage LearnView Nexus.</p><label class="field"><span>Admin password</span><input id="password" type="password" required autocomplete="current-password"></label><button class="btn primary" type="submit">${icon("log-in")} Sign in</button>${state.settings.setupComplete ? "" : `<p class="muted">Initial password: <strong>learnview-admin</strong></p>`}</form></section>`;
+  return `<section class="login"><form class="login-card" onsubmit="loginSubmit(event)">${logo()}<p class="eyebrow">Learn Smarter.</p><h2>Welcome back</h2><label class="field"><span>Admin password</span><input id="password" type="password" required autocomplete="current-password"></label><button class="btn primary" type="submit">${icon("log-in")} Sign in</button></form></section>`;
 }
 
 function shell() {
