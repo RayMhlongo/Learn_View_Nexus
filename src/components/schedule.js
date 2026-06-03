@@ -12,7 +12,6 @@ export function schedule() {
     { section: "schedule", action: "print", icon: "printer", title: "Print Schedule" }
   ]);
   if (action === "add") return `<section class="card"><div class="section-title"><h3>Add Lesson</h3><button class="btn ghost" onclick="navigateBack()">Back</button></div><button class="btn primary" onclick="openSchedule()">Open lesson form</button></section>`;
-  ui.scheduleMode = action === "print" ? "week" : action;
   const rows = filteredSchedule();
   return `<section class="card no-print"><div class="calendar-toolbar"><div class="tabs">${["week", "month", "day"].map(mode => `<button class="${ui.scheduleMode === mode ? "active" : ""}" onclick="setScheduleMode('${mode}')">${mode}</button>`).join("")}</div><div class="actions"><button class="btn ghost" onclick="navigateBack()">Back</button><button class="btn primary" onclick="openPrintPreview('schedule')">Print Preview</button></div></div></section>${scheduleFilters()}<section class="card no-print"><div class="section-title"><h3>Tutor availability</h3><span class="badge active">Conflict detection active</span></div><div class="availability">${state.settings.availability.split(",").map(item => `<div>${item.trim()}</div>`).join("")}</div></section>${action === "print" ? schedulePrint(rows) : `<section class="print-doc only-printable">${scheduleGrid(rows)}</section>`}`;
 }

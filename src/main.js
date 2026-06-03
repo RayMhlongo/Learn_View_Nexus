@@ -116,6 +116,9 @@ window.setSectionActionWithHistory = (section, action) => {
   const next = screenSnapshot();
   next.printPreview = null;
   next.sectionAction = { ...next.sectionAction, [section]: action };
+  if (section === "schedule" && ["week", "month", "day", "print"].includes(action)) {
+    next.scheduleMode = action === "print" ? "week" : action;
+  }
   pushScreen(next);
 };
 
@@ -572,14 +575,20 @@ window.quickAdd = () => {
 };
 
 window.printCurrent = () => {
+  const doc = document.querySelector(".print-preview .print-doc") || document.querySelector(".only-printable.print-doc");
+  if (!doc) {
+    toast("No printable document is available.");
+    return;
+  }
+
   document.body.classList.add("print-document");
   window.print();
   setTimeout(() => document.body.classList.remove("print-document"), 300);
 };
 
 window.downloadCurrentPdf = async () => {
-  const doc = document.querySelector(".print-preview .print-doc") || document.querySelector(".only-printable.print-doc");
-  if (!doc || !window.html2pdf) {
+  if (ui.pdfLoading) return;
+  if (!window.html2pdf) {
     toast("PDF download failed. Please use Print and Save as PDF.");
     return;
   }
@@ -589,16 +598,27 @@ window.downloadCurrentPdf = async () => {
   const filename = window.currentPdfFilename?.() || "LearnView_Document.pdf";
 
   try {
+    ui.pdfLoading = true;
+    renderApp();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    const doc = document.querySelector(".print-preview .print-doc") || document.querySelector(".only-printable.print-doc");
+    if (!doc) throw new Error("No printable document is available.");
+
     await window.html2pdf().set({
       margin: 6,
       filename,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF", scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation },
       pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     }).from(doc).save();
+    toast("PDF downloaded");
   } catch {
     toast("PDF download failed. Please use Print and Save as PDF.");
+  } finally {
+    ui.pdfLoading = false;
+    renderApp();
   }
 };
 
@@ -639,7 +659,7 @@ try {
   const statusBar = window.Capacitor?.Plugins?.StatusBar;
   statusBar?.setOverlaysWebView?.({ overlay: false });
   statusBar?.setStyle?.({ style: "DARK" });
-  statusBar?.setBackgroundColor?.({ color: "#ffffff" });
+  statusBar?.setBackgroundColor?.({ color: "#FFFFFF" });
 } catch {}
 
 renderApp();

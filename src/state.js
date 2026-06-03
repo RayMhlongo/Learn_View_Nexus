@@ -83,6 +83,7 @@ export const ui = {
   scheduleMode: "week",
   filters: {},
   printPreview: null,
+  pdfLoading: false,
   navigationStack: [],
   aiMessages: [],
   aiLoading: false,

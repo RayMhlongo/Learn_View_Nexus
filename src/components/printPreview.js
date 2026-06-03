@@ -7,13 +7,14 @@ import { schedulePrint } from "../print/schedule.js";
 export function printPreview() {
   const { type, id } = ui.printPreview || {};
   const documentHtml = printDocument(type, id);
+  const downloadLabel = ui.pdfLoading ? "Generating PDF..." : "Download PDF";
   return `<section class="print-preview">
     <header class="print-preview-toolbar no-print">
       <button class="btn ghost" onclick="navigateBack()">${icon("arrow-left")} Back</button>
       <div><strong>${previewTitle(type)}</strong><p class="muted">Previewing the selected document only.</p></div>
       <div class="actions">
         <button class="btn ghost" onclick="printCurrent()">${icon("printer")} Print</button>
-        <button class="btn primary" onclick="downloadCurrentPdf()">${icon("download")} Download PDF</button>
+        <button class="btn primary" onclick="downloadCurrentPdf()" ${ui.pdfLoading ? "disabled" : ""}>${icon("download")} ${downloadLabel}</button>
       </div>
     </header>
     <main class="print-preview-stage">${documentHtml || emptyPreview()}</main>
@@ -41,18 +42,23 @@ window.currentPdfFilename = () => {
 
   if (type === "invoice") {
     const invoice = state.invoices.find(row => row.id === id) || state.invoices[0];
-    return `LearnView_Invoice_${invoice?.id || "Selected"}.pdf`;
+    return `LearnView_Invoice_${safeFileName(invoice?.id || "Selected")}.pdf`;
   }
 
   if (type === "report") {
     const report = state.reportCards.find(row => row.id === id) || state.reportCards[0] || draftReport();
-    const term = String(report.periodLabel || report.periodType || "Report").replace(/\s+/g, "");
-    return `LearnView_ReportCard_${report.studentId || "Student"}_${term}.pdf`;
+    const student = getStudent(report.studentId);
+    const term = safeFileName(report.periodLabel || report.periodType || "Report");
+    return `LearnView_ReportCard_${safeFileName(student?.name || report.studentId || "Student")}_${term}.pdf`;
   }
 
   const date = new Date().toISOString().slice(0, 10);
-  return `LearnView_WeeklySchedule_${date}.pdf`;
+  return `LearnView_Schedule_${date}.pdf`;
 };
+
+function safeFileName(value) {
+  return String(value || "Document").trim().replace(/[^a-z0-9-]+/gi, "_").replace(/^_+|_+$/g, "") || "Document";
+}
 
 function filteredSchedule() {
   return state.schedule.filter(row =>
