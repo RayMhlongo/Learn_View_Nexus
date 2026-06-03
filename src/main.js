@@ -596,6 +596,14 @@ window.downloadCurrentPdf = async () => {
   const preview = ui.printPreview || {};
   const orientation = preview.type === "schedule" ? "landscape" : "portrait";
   const filename = window.currentPdfFilename?.() || "LearnView_Document.pdf";
+  const pdfOptions = {
+    margin: 6,
+    filename,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF", scrollY: 0 },
+    jsPDF: { unit: "mm", format: "a4", orientation },
+    pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+  };
 
   try {
     ui.pdfLoading = true;
@@ -605,14 +613,9 @@ window.downloadCurrentPdf = async () => {
     const doc = document.querySelector(".print-preview .print-doc") || document.querySelector(".only-printable.print-doc");
     if (!doc) throw new Error("No printable document is available.");
 
-    await window.html2pdf().set({
-      margin: 6,
-      filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFFFFF", scrollY: 0 },
-      jsPDF: { unit: "mm", format: "a4", orientation },
-      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-    }).from(doc).save();
+    const worker = window.html2pdf().set(pdfOptions).from(doc).toPdf();
+    const blob = await worker.outputPdf("blob");
+    await savePdfBlob(blob, filename);
     toast("PDF downloaded");
   } catch {
     toast("PDF download failed. Please use Print and Save as PDF.");
@@ -621,6 +624,66 @@ window.downloadCurrentPdf = async () => {
     renderApp();
   }
 };
+
+async function savePdfBlob(blob, filename) {
+  const plugins = window.Capacitor?.Plugins || {};
+  const isNative = window.Capacitor?.isNativePlatform?.();
+
+  if (isNative && plugins.Filesystem) {
+    try {
+      const uri = await savePdfNatively(plugins.Filesystem, blob, filename);
+      if (plugins.Share) {
+        try {
+          await plugins.Share.share({
+            title: filename,
+            text: "LearnView PDF document",
+            files: [uri],
+            dialogTitle: "Save or share PDF"
+          });
+        } catch {}
+      }
+      return;
+    } catch {
+      downloadBlob(blob, filename);
+      return;
+    }
+  }
+
+  downloadBlob(blob, filename);
+}
+
+async function savePdfNatively(filesystem, blob, filename) {
+  await filesystem.requestPermissions?.();
+  const data = await blobToBase64(blob);
+  const result = await filesystem.writeFile({
+    path: `LearnView/${filename}`,
+    data,
+    directory: "DOCUMENTS",
+    recursive: true
+  });
+  return result.uri;
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
 
 window.addEventListener("popstate", event => {
   if (currentModalIsOpen()) {
@@ -656,9 +719,14 @@ if ("serviceWorker" in navigator) {
 }
 
 try {
+  const systemBars = window.Capacitor?.Plugins?.SystemBars;
+  systemBars?.show?.();
+  systemBars?.setStyle?.({ style: "LIGHT" });
+
   const statusBar = window.Capacitor?.Plugins?.StatusBar;
   statusBar?.setOverlaysWebView?.({ overlay: false });
-  statusBar?.setStyle?.({ style: "DARK" });
+  statusBar?.show?.();
+  statusBar?.setStyle?.({ style: "LIGHT" });
   statusBar?.setBackgroundColor?.({ color: "#FFFFFF" });
 } catch {}
 

@@ -15,8 +15,14 @@
     },
     "StatusBar": {
       "overlaysWebView": false,
-      "style": "DARK",
+      "style": "LIGHT",
       "backgroundColor": "#FFFFFF"
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "LIGHT",
+      "hidden": false,
+      "animation": "NONE"
     }
   }
 }
