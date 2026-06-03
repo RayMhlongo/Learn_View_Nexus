@@ -2,6 +2,9 @@
 <resources>
     <color name="brand_primary">#078F98</color>
     <color name="brand_secondary">#344650</color>
+    <color name="colorPrimary">#078F98</color>
+    <color name="colorPrimaryDark">#344650</color>
+    <color name="colorAccent">#078F98</color>
     <color name="ic_launcher_background">#FFFFFF</color>
     <color name="splash_background">#FFFFFF</color>
 </resources>
