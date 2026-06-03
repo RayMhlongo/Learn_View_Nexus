@@ -12,6 +12,24 @@ npx cap add android
 npx cap sync android
 ```
 
+## Branding assets
+
+The project already includes LearnView-branded PWA and Android resources:
+
+- `assets/icons/learnview-icon-48.png`
+- `assets/icons/learnview-icon-72.png`
+- `assets/icons/learnview-icon-96.png`
+- `assets/icons/learnview-icon-144.png`
+- `assets/icons/learnview-icon-192.png`
+- `assets/icons/learnview-icon-512.png`
+- `assets/icons/learnview-icon-maskable-512.png`
+- `assets/icons/learnview-splash.png`
+- `android/app/src/main/res/mipmap-*`
+- `android/app/src/main/res/mipmap-anydpi-v26`
+- `android/app/src/main/res/drawable/splash.png`
+
+The launcher icon uses the LV mark from the official LearnView logo so it stays legible in Android app drawers, recent apps, and PWA home-screen installs. The splash asset uses the full LearnView logo on a white background.
+
 ## Web-first rules
 
 - Keep `index.html`, `styles.css` and `app.js` working directly in the browser.

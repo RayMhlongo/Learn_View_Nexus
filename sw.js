@@ -1,10 +1,18 @@
-const CACHE_NAME = "learnview-nexus-v4";
+const CACHE_NAME = "learnview-nexus-v5";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./manifest.webmanifest",
   "./assets/learnview-logo.jpeg",
+  "./assets/icons/learnview-icon-48.png",
+  "./assets/icons/learnview-icon-72.png",
+  "./assets/icons/learnview-icon-96.png",
+  "./assets/icons/learnview-icon-144.png",
+  "./assets/icons/learnview-icon-192.png",
+  "./assets/icons/learnview-icon-512.png",
+  "./assets/icons/learnview-icon-maskable-512.png",
+  "./assets/icons/learnview-splash.png",
   "./src/main.js",
   "./src/state.js",
   "./src/api.js",
